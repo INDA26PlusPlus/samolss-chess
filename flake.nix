@@ -1,6 +1,6 @@
-# Heavily inspired by: 
-# https://github.com/DeterminateSystems/zero-to-nix/blob/main/nix/templates/pkg/rust/flake.nix 
-# and 
+# Heavily inspired by:
+# https://github.com/DeterminateSystems/zero-to-nix/blob/main/nix/templates/pkg/rust/flake.nix
+# and
 # https://github.com/numtide/treefmt-nix
 {
 
@@ -38,9 +38,9 @@
         nixpkgs.lib.genAttrs systems (
           system:
           f {
-            pkgs = import nixpkgs { 
-              inherit system; 
-              
+            pkgs = import nixpkgs {
+              inherit system;
+
               overlays = [
                 rust-overlay.overlays.default
                 self.overlays.default
@@ -74,10 +74,14 @@
       devShells = forAllSystems (
         { pkgs }: {
           default = pkgs.mkShell {
-            packages = [ 
+            packages = [
               (pkgs.rustToolchain.override {
-                extensions = [ "rust-src" "rust-analyzer" "clippy"];
-              }) 
+                extensions = [
+                  "rust-src"
+                  "rust-analyzer"
+                  "clippy"
+                ];
+              })
             ];
           };
         }
