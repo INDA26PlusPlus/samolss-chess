@@ -52,7 +52,9 @@ fn square_is_checked(board: &Board, square: (usize, usize), king_is_white: bool)
                 Piece::Rook { .. } => rook_threatens_square(board, (x, y), square),
                 Piece::Bishop { .. } => bishop_threatens_square(board, (x, y), square),
                 Piece::Knight { .. } => knight_threatens_square((x, y), square),
-                Piece::Pawn { .. } => pawn_threatens_square((x, y), square),
+                Piece::Pawn { .. } => {
+                    pawn_threatens_square((x, y), square, piece.is_white() == Some(true))
+                }
             };
         }
     }
@@ -194,11 +196,16 @@ fn knight_threatens_square(knight_square: (usize, usize), square: (usize, usize)
     return false;
 }
 
-fn pawn_threatens_square(pawn_square: (usize, usize), square: (usize, usize)) -> bool {
+fn pawn_threatens_square(
+    pawn_square: (usize, usize),
+    square: (usize, usize),
+    is_white: bool,
+) -> bool {
     let x_diff = pawn_square.0.abs_diff(square.0);
-    let y_diff = pawn_square.1.abs_diff(square.1);
+    let y_diff = pawn_square.1 as isize - square.1 as isize;
 
-    return x_diff == 1 && y_diff == 1;
+    // if y_diff < 0 and is_white were going forward
+    return x_diff == 1 && ((y_diff == -1 && is_white) || (y_diff != 1 && !is_white));
 }
 
 fn check_king_move(board: &Board, old_square: (usize, usize), new_square: (usize, usize)) -> bool {
@@ -238,5 +245,71 @@ fn check_knight_move(
 }
 
 fn check_pawn_move(board: &Board, old_square: (usize, usize), new_square: (usize, usize)) -> bool {
-    return true;
+    let x_diff = old_square.0.abs_diff(new_square.0);
+    let y_diff = old_square.1 as isize - new_square.1 as isize;
+
+    let pawn = board.squares[old_square.1][old_square.0];
+
+    if !matches!(pawn, Piece::Pawn { .. }) {
+        panic!("check pawn move called on non-pawn piece")
+    }
+
+    // Pawn is going the wrong way
+    if (y_diff < 0 && pawn.is_white() != Some(true))
+        || (y_diff > 0 && pawn.is_white() == Some(true))
+    {
+        return false;
+    }
+
+    if y_diff.abs() > 2 {
+        return false;
+    }
+    println!("2_step");
+    if y_diff.abs() == 2 {
+        if pawn.has_moved() == Some(true) {
+            return false;
+        }
+        if x_diff != 0 {
+            return false;
+        }
+        let passed_y = (old_square.1 as isize - y_diff / 2) as usize;
+        let passed_x = old_square.0;
+        let passed_square = board.squares[passed_y][passed_x];
+
+        println!("{:?}, {:?}, {:?}", y_diff, old_square, passed_square);
+
+        if !matches!(passed_square, Piece::Empty) {
+            return false;
+        }
+
+        if !matches!(board.squares[new_square.1][new_square.0], Piece::Empty) {
+            return false;
+        }
+        return true;
+    }
+    println!("1_step");
+    if y_diff.abs() == 1 {
+        if x_diff == 1 {
+            let piece_to_take = board.squares[new_square.1][new_square.0];
+            // You cannot take an empty piece (this will change a bit with en passasnt) or the king
+            if matches!(piece_to_take, Piece::Empty) || matches!(piece_to_take, Piece::King { .. })
+            {
+                return false;
+            }
+
+            if pawn.is_white() == piece_to_take.is_white() {
+                return false;
+            }
+
+            return true;
+        }
+
+        if !matches!(board.squares[new_square.1][new_square.0], Piece::Empty) {
+            return false;
+        }
+
+        return true;
+    }
+
+    return false;
 }

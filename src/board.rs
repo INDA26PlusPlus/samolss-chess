@@ -29,6 +29,17 @@ impl Piece {
             Piece::Pawn { is_white, .. } => Some(*is_white),
         }
     }
+    pub fn has_moved(&self) -> Option<bool> {
+        match self {
+            Piece::Empty => None,
+            Piece::King { has_moved, .. } => Some(*has_moved),
+            Piece::Queen { .. } => None,
+            Piece::Rook { has_moved, .. } => Some(*has_moved),
+            Piece::Bishop { .. } => None,
+            Piece::Knight { .. } => None,
+            Piece::Pawn { has_moved, .. } => Some(*has_moved),
+        }
+    }
 }
 
 impl fmt::Debug for Piece {
@@ -69,15 +80,17 @@ impl fmt::Debug for Piece {
 // 6 7 [P,  P,  P,  P,  P,  P,  P,  P]  (Black)
 // 7 8 [R,  Kn, B,  Q,  K,  B, Kn,  R]  (Black)
 // So accessing the square H3 would be the indexes [7][2]
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Board {
     pub white_turn: bool,
     pub squares: [[Piece; WIDTH]; HEIGHT],
+    pub history: Vec<(usize, usize)>,
 }
 
 pub fn create_board() -> Board {
     Board {
         white_turn: true,
+        history: Vec::new(),
         squares: [
             [
                 Piece::Rook {
