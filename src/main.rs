@@ -4,8 +4,9 @@ use samolss_chess::{
 };
 
 fn main() {
-    let board = create_board();
+    let mut board = create_board();
 
     print_board(&board);
-    let new_board = move_piece::move_piece(&board, (4, 6), (4, 3)).expect("E");
+    board = move_piece::move_piece(board, (4, 1), (4, 3)).expect("E");
+    print_board(&board);
 }

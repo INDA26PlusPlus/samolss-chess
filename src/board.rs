@@ -1,11 +1,12 @@
 use std::fmt;
 
-const WIDTH: usize = 8;
-const HEIGHT: usize = 8;
+pub const WIDTH: usize = 8;
+pub const HEIGHT: usize = 8;
 
 // Enum describing what is on each square. Whether a piece has moved matters to some pieces: for
 // example castling is not available if the king or the rook with which to castle has moved. The
 // Pawns can also move 2 squares if they have yet to move.
+#[derive(Clone, Copy)]
 pub enum Piece {
     King { is_white: bool, has_moved: bool },
     Queen { is_white: bool },
@@ -68,6 +69,7 @@ impl fmt::Debug for Piece {
 // 6 7 [P,  P,  P,  P,  P,  P,  P,  P]  (Black)
 // 7 8 [R,  Kn, B,  Q,  K,  B, Kn,  R]  (Black)
 // So accessing the square H3 would be the indexes [7][2]
+#[derive(Clone, Copy)]
 pub struct Board {
     pub white_turn: bool,
     pub squares: [[Piece; WIDTH]; HEIGHT],
