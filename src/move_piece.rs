@@ -241,6 +241,25 @@ fn check_knight_move(
     old_square: (usize, usize),
     new_square: (usize, usize),
 ) -> bool {
+    let x_diff = old_square.0.abs_diff(new_square.0);
+    let y_diff = new_square.1.abs_diff(new_square.1);
+
+    let knight = board.squares[old_square.1][old_square.0];
+
+    if !matches!(knight, Piece::Knight { .. }) {
+        panic!("check_knight_move called for non-knight piece");
+    }
+
+    if (x_diff != 2 && y_diff != 1) || (x_diff != 1 && y_diff != 2) {
+        return false;
+    }
+
+    let taken_piece = board.squares[new_square.1][new_square.0];
+
+    if knight.is_white() == taken_piece.is_white() {
+        return false;
+    }
+
     return true;
 }
 
