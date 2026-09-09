@@ -212,14 +212,17 @@ fn pawn_threatens_square(
 }
 
 fn check_king_move(board: &Board, old_square: (usize, usize), new_square: (usize, usize)) -> bool {
+    let king = board.squares[old_square.1][old_square.0];
     // King can only move one step
     if old_square.0.abs_diff(new_square.0) > 1 || old_square.1.abs_diff(new_square.1) > 1 {
         return false;
     }
 
     let new_square_piece = &board.squares[new_square.0][new_square.1];
-    let new_square_occupied = !(matches!(new_square_piece, Piece::Empty));
 
+    if new_square_piece.is_white() == king.is_white() {
+        return false;
+    }
     return true;
 }
 
