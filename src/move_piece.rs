@@ -18,6 +18,8 @@ pub fn move_piece(
         return Err("Turn is mismatched".to_string());
     }
 
+    // This only checks if the move is allowed from the pieces own perspective, it does not include
+    // if the king gets checked frome the move and will therefore have to be checked elsewhere
     let move_allowed = match piece {
         Piece::King { .. } => check_king_move(&board, old_square, new_square),
         Piece::Queen { .. } => check_queen_move(&board, old_square, new_square),
@@ -234,6 +236,38 @@ fn check_bishop_move(
     old_square: (usize, usize),
     new_square: (usize, usize),
 ) -> bool {
+    let x_diff = old_square.0 as isize - new_square.0 as isize;
+    let y_diff = old_square.1 as isize - new_square.1 as isize;
+
+    let bishop = board.squares[old_square.1][old_square.0];
+
+    if x_diff.abs() != y_diff.abs() {
+        return false;
+    }
+
+    let mut temp_piece = &Piece::Empty;
+    let mut temp_x = old_square.0;
+    let mut temp_y = old_square.1;
+    while matches!(temp_piece, &Piece::Empty)
+        && temp_x > 0
+        && temp_x < WIDTH
+        && temp_y > 0
+        && temp_y < HEIGHT
+    {
+        temp_x += x_diff.signum() as usize;
+        temp_y += y_diff.signum() as usize;
+        temp_piece = &board.squares[temp_y][temp_x];
+
+        // Pieces are the same color
+        if temp_piece.is_white() == bishop.is_white() {
+            return false;
+        }
+
+        if temp_x == new_square.0 && temp_y == new_square.1 {
+            return true;
+        }
+    }
+    panic!("Fuuck");
     return true;
 }
 
