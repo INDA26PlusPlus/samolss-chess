@@ -248,15 +248,28 @@ fn check_bishop_move(
     let mut temp_piece = &Piece::Empty;
     let mut temp_x = old_square.0;
     let mut temp_y = old_square.1;
-    while matches!(temp_piece, &Piece::Empty)
-        && temp_x > 0
-        && temp_x < WIDTH
-        && temp_y > 0
-        && temp_y < HEIGHT
-    {
-        temp_x += x_diff.signum() as usize;
-        temp_y += y_diff.signum() as usize;
+    println!("here: {} {}", temp_x, temp_y);
+    while matches!(temp_piece, &Piece::Empty) && temp_x < WIDTH && temp_y < HEIGHT {
+        println!("{}", y_diff.signum().abs());
+        println!("{}", x_diff.signum().abs());
+        // temp_x -= x_diff.signum() as usize;
+        if x_diff < 0 {
+            println!("rawr");
+            temp_x += x_diff.signum().abs() as usize
+        } else {
+            println!("rawr");
+            temp_x -= x_diff.signum().abs() as usize
+        }
+        // temp_y -= y_diff.signum() as usize;
+        if y_diff < 0 {
+            println!("tttt");
+            temp_y += y_diff.signum().abs() as usize
+        } else {
+            temp_y -= y_diff.signum().abs() as usize
+        }
+        println!("{} {}", temp_x, temp_y);
         temp_piece = &board.squares[temp_y][temp_x];
+        println!("{:?}", temp_piece);
 
         // Pieces are the same color
         if temp_piece.is_white() == bishop.is_white() {
