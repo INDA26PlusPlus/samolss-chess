@@ -1,3 +1,4 @@
+use crate::board;
 use crate::board::Board;
 use crate::board::HEIGHT;
 use crate::board::Piece;
@@ -238,35 +239,8 @@ fn check_queen_move(board: &Board, old_square: (usize, usize), new_square: (usiz
     if !((x_diff == 0) ^ (y_diff == 0)) && slope != 0 {
         return false;
     }
-    let mut temp_piece = &Piece::Empty;
-    let mut temp_x = old_square.0;
-    let mut temp_y = old_square.1;
-    while matches!(temp_piece, &Piece::Empty) && temp_x < WIDTH && temp_y < HEIGHT {
-        // temp_x -= x_diff.signum() as usize;
-        if x_diff < 0 {
-            temp_x += x_diff.signum().abs() as usize;
-        } else {
-            temp_x -= x_diff.signum().abs() as usize;
-        }
-        // temp_y -= y_diff.signum() as usize;
-        if y_diff < 0 {
-            temp_y += y_diff.signum().abs() as usize;
-        } else {
-            temp_y -= y_diff.signum().abs() as usize;
-        }
-        temp_piece = &board.squares[temp_y][temp_x];
 
-        // Pieces are the same color
-        if temp_piece.is_white() == queen.is_white() {
-            return false;
-        }
-
-        if temp_x == new_square.0 && temp_y == new_square.1 {
-            return true;
-        }
-    }
-
-    panic!("FUFUUFUFFUFUck")
+    traverse_board(board, old_square, new_square)
 }
 
 fn check_rook_move(board: &Board, old_square: (usize, usize), new_square: (usize, usize)) -> bool {
@@ -279,34 +253,7 @@ fn check_rook_move(board: &Board, old_square: (usize, usize), new_square: (usize
         return false;
     }
 
-    let mut temp_piece = &Piece::Empty;
-    let mut temp_x = old_square.0;
-    let mut temp_y = old_square.1;
-    while matches!(temp_piece, &Piece::Empty) && temp_x < WIDTH && temp_y < HEIGHT {
-        // temp_x -= x_diff.signum() as usize;
-        if x_diff < 0 {
-            temp_x += x_diff.signum().abs() as usize;
-        } else {
-            temp_x -= x_diff.signum().abs() as usize;
-        }
-        // temp_y -= y_diff.signum() as usize;
-        if y_diff < 0 {
-            temp_y += y_diff.signum().abs() as usize;
-        } else {
-            temp_y -= y_diff.signum().abs() as usize;
-        }
-        temp_piece = &board.squares[temp_y][temp_x];
-
-        // Pieces are the same color
-        if temp_piece.is_white() == rook.is_white() {
-            return false;
-        }
-
-        if temp_x == new_square.0 && temp_y == new_square.1 {
-            return true;
-        }
-    }
-    panic!("FFFFFFuuuuuck")
+    traverse_board(board, old_square, new_square)
 }
 
 fn check_bishop_move(
@@ -317,40 +264,11 @@ fn check_bishop_move(
     let x_diff = old_square.0 as isize - new_square.0 as isize;
     let y_diff = old_square.1 as isize - new_square.1 as isize;
 
-    let bishop = board.squares[old_square.1][old_square.0];
-
     if x_diff.abs() != y_diff.abs() {
         return false;
     }
 
-    let mut temp_piece = &Piece::Empty;
-    let mut temp_x = old_square.0;
-    let mut temp_y = old_square.1;
-    while matches!(temp_piece, &Piece::Empty) && temp_x < WIDTH && temp_y < HEIGHT {
-        // temp_x -= x_diff.signum() as usize;
-        if x_diff < 0 {
-            temp_x += x_diff.signum().abs() as usize;
-        } else {
-            temp_x -= x_diff.signum().abs() as usize;
-        }
-        // temp_y -= y_diff.signum() as usize;
-        if y_diff < 0 {
-            temp_y += y_diff.signum().abs() as usize;
-        } else {
-            temp_y -= y_diff.signum().abs() as usize;
-        }
-        temp_piece = &board.squares[temp_y][temp_x];
-
-        // Pieces are the same color
-        if temp_piece.is_white() == bishop.is_white() {
-            return false;
-        }
-
-        if temp_x == new_square.0 && temp_y == new_square.1 {
-            return true;
-        }
-    }
-    panic!("Fuuck");
+    traverse_board(board, old_square, new_square)
 }
 
 fn check_knight_move(
@@ -400,7 +318,6 @@ fn check_pawn_move(board: &Board, old_square: (usize, usize), new_square: (usize
     if y_diff.abs() > 2 {
         return false;
     }
-    println!("2_step");
     if y_diff.abs() == 2 {
         if pawn.has_moved() == Some(true) {
             return false;
@@ -423,7 +340,6 @@ fn check_pawn_move(board: &Board, old_square: (usize, usize), new_square: (usize
         }
         return true;
     }
-    println!("1_step");
     if y_diff.abs() == 1 {
         if x_diff == 1 {
             let piece_to_take = board.squares[new_square.1][new_square.0];
@@ -448,4 +364,41 @@ fn check_pawn_move(board: &Board, old_square: (usize, usize), new_square: (usize
     }
 
     return false;
+}
+
+fn traverse_board(board: &Board, old_square: (usize, usize), new_square: (usize, usize)) -> bool {
+    // Traverses the board from one square to another making sure there is nothing in between the
+    let x_diff = old_square.0 as isize - new_square.0 as isize;
+    let y_diff = old_square.1 as isize - new_square.1 as isize;
+
+    let original_piece = board.squares[old_square.1][old_square.0];
+
+    let mut temp_piece = &Piece::Empty;
+    let mut temp_x = old_square.0;
+    let mut temp_y = old_square.1;
+    while matches!(temp_piece, &Piece::Empty) && temp_x < WIDTH && temp_y < HEIGHT {
+        // temp_x -= x_diff.signum() as usize;
+        if x_diff < 0 {
+            temp_x += x_diff.signum().abs() as usize;
+        } else {
+            temp_x -= x_diff.signum().abs() as usize;
+        }
+        // temp_y -= y_diff.signum() as usize;
+        if y_diff < 0 {
+            temp_y += y_diff.signum().abs() as usize;
+        } else {
+            temp_y -= y_diff.signum().abs() as usize;
+        }
+        temp_piece = &board.squares[temp_y][temp_x];
+
+        // Pieces are the same color
+        if temp_piece.is_white() == original_piece.is_white() {
+            return false;
+        }
+
+        if temp_x == new_square.0 && temp_y == new_square.1 {
+            return true;
+        }
+    }
+    panic!("FUUUUUUUUCK")
 }
