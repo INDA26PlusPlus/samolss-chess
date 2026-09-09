@@ -228,7 +228,43 @@ fn check_queen_move(board: &Board, old_square: (usize, usize), new_square: (usiz
 }
 
 fn check_rook_move(board: &Board, old_square: (usize, usize), new_square: (usize, usize)) -> bool {
-    return true;
+    let x_diff = old_square.0 as isize - new_square.0 as isize;
+    let y_diff = old_square.1 as isize - new_square.1 as isize;
+
+    let rook = board.squares[old_square.1][old_square.0];
+
+    if !((x_diff == 0) ^ (y_diff == 0)) {
+        return false;
+    }
+
+    let mut temp_piece = &Piece::Empty;
+    let mut temp_x = old_square.0;
+    let mut temp_y = old_square.1;
+    while matches!(temp_piece, &Piece::Empty) && temp_x < WIDTH && temp_y < HEIGHT {
+        // temp_x -= x_diff.signum() as usize;
+        if x_diff < 0 {
+            temp_x += x_diff.signum().abs() as usize;
+        } else {
+            temp_x -= x_diff.signum().abs() as usize;
+        }
+        // temp_y -= y_diff.signum() as usize;
+        if y_diff < 0 {
+            temp_y += y_diff.signum().abs() as usize;
+        } else {
+            temp_y -= y_diff.signum().abs() as usize;
+        }
+        temp_piece = &board.squares[temp_y][temp_x];
+
+        // Pieces are the same color
+        if temp_piece.is_white() == rook.is_white() {
+            return false;
+        }
+
+        if temp_x == new_square.0 && temp_y == new_square.1 {
+            return true;
+        }
+    }
+    panic!("FFFFFFuuuuuck")
 }
 
 fn check_bishop_move(
@@ -248,28 +284,20 @@ fn check_bishop_move(
     let mut temp_piece = &Piece::Empty;
     let mut temp_x = old_square.0;
     let mut temp_y = old_square.1;
-    println!("here: {} {}", temp_x, temp_y);
     while matches!(temp_piece, &Piece::Empty) && temp_x < WIDTH && temp_y < HEIGHT {
-        println!("{}", y_diff.signum().abs());
-        println!("{}", x_diff.signum().abs());
         // temp_x -= x_diff.signum() as usize;
         if x_diff < 0 {
-            println!("rawr");
-            temp_x += x_diff.signum().abs() as usize
+            temp_x += x_diff.signum().abs() as usize;
         } else {
-            println!("rawr");
-            temp_x -= x_diff.signum().abs() as usize
+            temp_x -= x_diff.signum().abs() as usize;
         }
         // temp_y -= y_diff.signum() as usize;
         if y_diff < 0 {
-            println!("tttt");
-            temp_y += y_diff.signum().abs() as usize
+            temp_y += y_diff.signum().abs() as usize;
         } else {
-            temp_y -= y_diff.signum().abs() as usize
+            temp_y -= y_diff.signum().abs() as usize;
         }
-        println!("{} {}", temp_x, temp_y);
         temp_piece = &board.squares[temp_y][temp_x];
-        println!("{:?}", temp_piece);
 
         // Pieces are the same color
         if temp_piece.is_white() == bishop.is_white() {
@@ -281,7 +309,6 @@ fn check_bishop_move(
         }
     }
     panic!("Fuuck");
-    return true;
 }
 
 fn check_knight_move(
