@@ -224,7 +224,46 @@ fn check_king_move(board: &Board, old_square: (usize, usize), new_square: (usize
 }
 
 fn check_queen_move(board: &Board, old_square: (usize, usize), new_square: (usize, usize)) -> bool {
-    return true;
+    let x_diff = old_square.0 as isize - new_square.0 as isize;
+    let y_diff = old_square.1 as isize - new_square.1 as isize;
+
+    let queen = board.squares[old_square.1][old_square.0];
+
+    let slope = x_diff.abs() - y_diff.abs();
+
+    // Isn't going straight nor is it going diagonally
+    if !((x_diff == 0) ^ (y_diff == 0)) && slope != 0 {
+        return false;
+    }
+    let mut temp_piece = &Piece::Empty;
+    let mut temp_x = old_square.0;
+    let mut temp_y = old_square.1;
+    while matches!(temp_piece, &Piece::Empty) && temp_x < WIDTH && temp_y < HEIGHT {
+        // temp_x -= x_diff.signum() as usize;
+        if x_diff < 0 {
+            temp_x += x_diff.signum().abs() as usize;
+        } else {
+            temp_x -= x_diff.signum().abs() as usize;
+        }
+        // temp_y -= y_diff.signum() as usize;
+        if y_diff < 0 {
+            temp_y += y_diff.signum().abs() as usize;
+        } else {
+            temp_y -= y_diff.signum().abs() as usize;
+        }
+        temp_piece = &board.squares[temp_y][temp_x];
+
+        // Pieces are the same color
+        if temp_piece.is_white() == queen.is_white() {
+            return false;
+        }
+
+        if temp_x == new_square.0 && temp_y == new_square.1 {
+            return true;
+        }
+    }
+
+    panic!("FUFUUFUFFUFUck")
 }
 
 fn check_rook_move(board: &Board, old_square: (usize, usize), new_square: (usize, usize)) -> bool {
