@@ -14,7 +14,6 @@ pub fn move_piece(
     let y = old_square.1;
 
     let piece = &board.squares[y][x];
-    println!("{:?}:, x:{x}, y:{y}", piece);
     if Some(board.white_turn) != piece.is_white() {
         return Err("Turn is mismatched".to_string());
     }
@@ -31,25 +30,51 @@ pub fn move_piece(
         Piece::Empty => false,
     };
 
-    if move_allowed {
-        board.white_turn = !&board.white_turn;
-        board.squares[new_square.1][new_square.0] = board.squares[y][x];
-        board.squares[y][x] = Piece::Empty;
-        board.history.push((old_square, new_square));
-        return Ok(board);
+    if !move_allowed {
+        return Err("Move not allowed".to_string());
     }
 
-    Err("Unallowed move".to_string())
+    let mut temp_board = board.clone();
+    temp_board.white_turn = !&temp_board.white_turn;
+    temp_board.squares[new_square.1][new_square.0] = temp_board.squares[y][x];
+    temp_board.squares[y][x] = Piece::Empty;
+    temp_board.history.push((old_square, new_square));
+
+    if king_is_checked(&temp_board, !temp_board.white_turn) {
+        return Err("Move puts own king in check".to_string());
+    }
+
+    board.white_turn = !&board.white_turn;
+    board.squares[new_square.1][new_square.0] = board.squares[y][x];
+    board.squares[y][x] = Piece::Empty;
+    board.history.push((old_square, new_square));
+    return Ok(board);
 }
 
-fn square_is_checked(board: &Board, square: (usize, usize), king_is_white: bool) {
+fn king_is_checked(board: &Board, king_is_white: bool) -> bool {
+    for (y, row) in board.squares.iter().enumerate() {
+        for (x, piece) in row.iter().enumerate() {
+            if piece.is_white() != Some(king_is_white) {
+                continue;
+            }
+            if !matches!(piece, Piece::King { .. }) {
+                continue;
+            }
+            return square_is_checked(board, (x, y), king_is_white);
+        }
+    }
+    panic!("King not found on board");
+}
+
+fn square_is_checked(board: &Board, square: (usize, usize), king_is_white: bool) -> bool {
     let squares = &board.squares;
     for (y, row) in squares.iter().enumerate() {
         for (x, piece) in row.iter().enumerate() {
+            // println!("{:?}", piece);
             if piece.is_white() == Some(king_is_white) {
                 continue;
             }
-            match piece {
+            let piece_checks_square = match piece {
                 Piece::Empty => continue,
                 Piece::King { .. } => king_threatens_square((x, y), square),
                 Piece::Queen { .. } => queen_threatens_square(board, (x, y), square),
@@ -60,12 +85,19 @@ fn square_is_checked(board: &Board, square: (usize, usize), king_is_white: bool)
                     pawn_threatens_square((x, y), square, piece.is_white() == Some(true))
                 }
             };
+
+            if !piece_checks_square {
+                continue;
+            }
+
+            return true;
         }
     }
+    return false;
 }
 
 fn king_threatens_square(king_square: (usize, usize), square: (usize, usize)) -> bool {
-    king_square.0.abs_diff(square.0) < 1 && king_square.1.abs_diff(square.1) < 1
+    king_square.0.abs_diff(square.0) <= 1 && king_square.1.abs_diff(square.1) <= 1
 }
 
 fn queen_threatens_square(
@@ -87,30 +119,7 @@ fn queen_threatens_square(
         return false;
     }
 
-    // Step towards the square one at a time until we reach a non-empty square or the square
-    let mut temp_piece = &Piece::Empty;
-    let mut temp_x = queen_square.0;
-    let mut temp_y = queen_square.1;
-    while matches!(temp_piece, &Piece::Empty)
-        && temp_x > 0
-        && temp_x < WIDTH
-        && temp_y > 0
-        && temp_y < HEIGHT
-    {
-        temp_x += x_diff.signum() as usize;
-        temp_y += y_diff.signum() as usize;
-        temp_piece = &board.squares[temp_y][temp_x];
-
-        if temp_x == square.0 && temp_y == square.1 {
-            return true;
-        }
-
-        if !matches!(temp_piece, &Piece::Empty) {
-            return false;
-        }
-    }
-    // Something went wrong
-    panic!("Fuuuuuuuck");
+    return traverse_board(board, queen_square, square);
 }
 
 fn rook_threatens_square(
@@ -125,31 +134,7 @@ fn rook_threatens_square(
         return false;
     }
 
-    // Should probably break this out into a separate function, since it handles straights and
-    // diagonals
-    let mut temp_piece = &Piece::Empty;
-    let mut temp_x = rook_square.0;
-    let mut temp_y = rook_square.1;
-    while matches!(temp_piece, &Piece::Empty)
-        && temp_x > 0
-        && temp_x < WIDTH
-        && temp_y > 0
-        && temp_y < HEIGHT
-    {
-        temp_x += x_diff.signum() as usize;
-        temp_y += y_diff.signum() as usize;
-        temp_piece = &board.squares[temp_y][temp_x];
-
-        if temp_x == square.0 && temp_y == square.1 {
-            return true;
-        }
-
-        if !matches!(temp_piece, &Piece::Empty) {
-            return false;
-        }
-    }
-    // Something went wrong
-    panic!("Fuuuuuuuck");
+    return traverse_board(board, rook_square, square);
 }
 
 fn bishop_threatens_square(
@@ -165,29 +150,7 @@ fn bishop_threatens_square(
         return false;
     }
 
-    let mut temp_piece = &Piece::Empty;
-    let mut temp_x = bishop_square.0;
-    let mut temp_y = bishop_square.1;
-    while matches!(temp_piece, &Piece::Empty)
-        && temp_x > 0
-        && temp_x < WIDTH
-        && temp_y > 0
-        && temp_y < HEIGHT
-    {
-        temp_x += x_diff.signum() as usize;
-        temp_y += y_diff.signum() as usize;
-        temp_piece = &board.squares[temp_y][temp_x];
-
-        if temp_x == square.0 && temp_y == square.1 {
-            return true;
-        }
-
-        if !matches!(temp_piece, &Piece::Empty) {
-            return false;
-        }
-    }
-    // Something went wrong
-    panic!("Fuuuuuuuck");
+    return traverse_board(board, bishop_square, square);
 }
 
 fn knight_threatens_square(knight_square: (usize, usize), square: (usize, usize)) -> bool {
@@ -209,7 +172,7 @@ fn pawn_threatens_square(
     let y_diff = pawn_square.1 as isize - square.1 as isize;
 
     // if y_diff < 0 and is_white were going forward
-    return x_diff == 1 && ((y_diff == -1 && is_white) || (y_diff != 1 && !is_white));
+    return x_diff == 1 && ((y_diff == -1 && is_white) || (y_diff == 1 && !is_white));
 }
 
 fn check_king_move(board: &Board, old_square: (usize, usize), new_square: (usize, usize)) -> bool {
@@ -231,8 +194,6 @@ fn check_queen_move(board: &Board, old_square: (usize, usize), new_square: (usiz
     let x_diff = old_square.0 as isize - new_square.0 as isize;
     let y_diff = old_square.1 as isize - new_square.1 as isize;
 
-    let queen = board.squares[old_square.1][old_square.0];
-
     let slope = x_diff.abs() - y_diff.abs();
 
     // Isn't going straight nor is it going diagonally
@@ -246,8 +207,6 @@ fn check_queen_move(board: &Board, old_square: (usize, usize), new_square: (usiz
 fn check_rook_move(board: &Board, old_square: (usize, usize), new_square: (usize, usize)) -> bool {
     let x_diff = old_square.0 as isize - new_square.0 as isize;
     let y_diff = old_square.1 as isize - new_square.1 as isize;
-
-    let rook = board.squares[old_square.1][old_square.0];
 
     if !((x_diff == 0) ^ (y_diff == 0)) {
         return false;
@@ -285,7 +244,7 @@ fn check_knight_move(
         panic!("check_knight_move called for non-knight piece");
     }
 
-    if (x_diff != 2 && y_diff != 1) || (x_diff != 1 && y_diff != 2) {
+    if !(x_diff != 2 && y_diff != 1) && !(x_diff != 1 && y_diff != 2) {
         return false;
     }
 
@@ -328,8 +287,6 @@ fn check_pawn_move(board: &Board, old_square: (usize, usize), new_square: (usize
         let passed_y = (old_square.1 as isize - y_diff / 2) as usize;
         let passed_x = old_square.0;
         let passed_square = board.squares[passed_y][passed_x];
-
-        println!("{:?}, {:?}, {:?}", y_diff, old_square, passed_square);
 
         if !matches!(passed_square, Piece::Empty) {
             return false;
