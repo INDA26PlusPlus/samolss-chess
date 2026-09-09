@@ -84,7 +84,7 @@ impl fmt::Debug for Piece {
 pub struct Board {
     pub white_turn: bool,
     pub squares: [[Piece; WIDTH]; HEIGHT],
-    pub history: Vec<(usize, usize)>,
+    pub history: Vec<((usize, usize), (usize, usize))>,
 }
 
 pub fn create_board() -> Board {

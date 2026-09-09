@@ -32,6 +32,7 @@ pub fn move_piece(
         board.white_turn = !&board.white_turn;
         board.squares[new_square.1][new_square.0] = board.squares[y][x];
         board.squares[y][x] = Piece::Empty;
+        board.history.push((old_square, new_square));
         return Ok(board);
     }
 
