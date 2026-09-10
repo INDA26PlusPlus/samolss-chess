@@ -232,7 +232,7 @@ pub fn create_board() -> Board {
                     has_moved: false,
                 },
                 Piece::Bishop { is_white: false },
-                Piece::Knight { is_white: true },
+                Piece::Knight { is_white: false },
                 Piece::Rook {
                     is_white: false,
                     has_moved: false,
