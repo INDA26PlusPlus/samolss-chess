@@ -12,6 +12,7 @@ pub fn move_piece(
     println!("Move_piece");
     let x = old_square.0;
     let y = old_square.1;
+    let mut is_castle = false;
 
     let piece = &board.squares[y][x];
     if Some(board.white_turn) != piece.is_white() {
@@ -21,7 +22,11 @@ pub fn move_piece(
     // This only checks if the move is allowed from the pieces own perspective, it does not include
     // if the king gets checked frome the move and will therefore have to be checked elsewhere
     let move_allowed = match piece {
-        Piece::King { .. } => check_king_move(&board, old_square, new_square),
+        Piece::King { .. } => {
+            let (move_allowed, is_castle_) = check_king_move(&board, old_square, new_square);
+            is_castle = is_castle_;
+            move_allowed
+        }
         Piece::Queen { .. } => check_queen_move(&board, old_square, new_square),
         Piece::Rook { .. } => check_rook_move(&board, old_square, new_square),
         Piece::Bishop { .. } => check_bishop_move(&board, old_square, new_square),
@@ -36,14 +41,22 @@ pub fn move_piece(
 
     let mut temp_board = board.clone();
     temp_board.white_turn = !&temp_board.white_turn;
-    temp_board.squares[new_square.1][new_square.0] = temp_board.squares[y][x];
-    temp_board.squares[y][x] = Piece::Empty;
-    temp_board.history.push((old_square, new_square));
+    if is_castle {
+        temp_board = castle(temp_board, old_square, new_square);
+    } else {
+        temp_board.squares[new_square.1][new_square.0] = temp_board.squares[y][x];
+        temp_board.squares[y][x] = Piece::Empty;
+        temp_board.history.push((old_square, new_square));
+    }
 
     if king_is_checked(&temp_board, !temp_board.white_turn) {
         return Err("Move puts own king in check".to_string());
     }
 
+    if is_castle {
+        board = castle(board, old_square, new_square);
+        return Ok(board);
+    }
     board.white_turn = !&board.white_turn;
     board.squares[new_square.1][new_square.0] = board.squares[y][x];
     board.squares[y][x] = Piece::Empty;
@@ -175,19 +188,72 @@ fn pawn_threatens_square(
     return x_diff == 1 && ((y_diff == -1 && is_white) || (y_diff == 1 && !is_white));
 }
 
-fn check_king_move(board: &Board, old_square: (usize, usize), new_square: (usize, usize)) -> bool {
+fn check_king_move(
+    board: &Board,
+    old_square: (usize, usize),
+    new_square: (usize, usize),
+) -> (bool, bool) {
+    // Checks if the move of the king is allowed, returns (is_allowed, is_castle), the is_castle
+    // part will only be non-false if the move itself is allowed
+    let x_diff = old_square.0 as isize - new_square.0 as isize;
+    let y_diff = old_square.1 as isize - new_square.1 as isize;
+
     let king = board.squares[old_square.1][old_square.0];
-    // King can only move one step
-    if old_square.0.abs_diff(new_square.0) > 1 || old_square.1.abs_diff(new_square.1) > 1 {
-        return false;
+    let new_piece = board.squares[new_square.1][new_square.0];
+
+    // This line results in an error, that does not affect compilation?????????????? Seems similar
+    // to this https://github.com/rust-lang/rust-analyzer/issues/17441
+    let new_piece_king_colored = new_piece.is_white() == king.is_white();
+    let new_piece_moved = new_piece.has_moved() == Some(true);
+    let is_castling = matches!(new_piece, Piece::Rook { .. })
+        && king.has_moved() == Some(false)
+        && new_piece_king_colored
+        && !new_piece_moved;
+    println!("a: {is_castling}");
+    println!("b: {:?}", new_piece);
+
+    // King can only move one step unless castling
+    if (old_square.0.abs_diff(new_square.0) > 1 || old_square.1.abs_diff(new_square.1) > 1)
+        && !is_castling
+    {
+        return (false, false);
     }
 
+    if is_castling {
+        // When castling the king should only move 2 squares, unless some spinoff is being played
+        let passed_square = if x_diff < 0 {
+            (old_square.0 + 1, old_square.1)
+        } else {
+            (old_square.0 - 1, old_square.1)
+        };
+        let passed_piece = board.squares[passed_square.1][passed_square.0];
+        let king_final_square = if x_diff < 0 {
+            (passed_square.0 + 1, old_square.1)
+        } else {
+            (old_square.0 - 1, old_square.1)
+        };
+        let king_final_square_piece = board.squares[king_final_square.1][king_final_square.0];
+        println!("d");
+        // You cannot pass/capture a piece when castling
+        if !matches!(passed_piece, Piece::Empty) || !matches!(king_final_square_piece, Piece::Empty)
+        {
+            return (false, false);
+        }
+        println!("e");
+
+        if square_is_checked(board, passed_square, king.is_white() == Some(true)) {
+            return (false, false);
+        }
+        println!("f");
+        return (true, true);
+    }
+    println!("g");
     let new_square_piece = &board.squares[new_square.0][new_square.1];
 
     if new_square_piece.is_white() == king.is_white() {
-        return false;
+        return (false, false);
     }
-    return true;
+    return (true, false);
 }
 
 fn check_queen_move(board: &Board, old_square: (usize, usize), new_square: (usize, usize)) -> bool {
@@ -358,4 +424,34 @@ fn traverse_board(board: &Board, old_square: (usize, usize), new_square: (usize,
         }
     }
     panic!("FUUUUUUUUCK")
+}
+
+fn castle(mut board: Board, old_square: (usize, usize), new_square: (usize, usize)) -> Board {
+    // Reminder to myself: I dont think we check whether there is anything between the rook and
+    // the king, this should only matter for "O-O-O"
+    let x_diff = old_square.0 as isize - new_square.0 as isize;
+    // Should be 0 if castling
+
+    let new_king_square = if x_diff.signum() == 1 {
+        (old_square.0 - 2, old_square.1)
+    } else {
+        (old_square.0 + 2, old_square.1)
+    };
+    let new_rook_square = if x_diff.signum() == 1 {
+        (new_king_square.0 + 1, new_king_square.1)
+    } else {
+        (new_king_square.0 - 1, new_king_square.1)
+    };
+
+    // Move king
+    board.squares[new_king_square.1][new_king_square.0] = board.squares[old_square.1][old_square.0];
+    board.squares[old_square.1][old_square.0] = Piece::Empty;
+
+    //Move rook
+    board.squares[new_rook_square.1][new_rook_square.0] = board.squares[new_square.1][new_square.0];
+    board.squares[new_square.1][new_square.0] = Piece::Empty;
+
+    board.history.push((old_square, new_square));
+
+    return board;
 }
