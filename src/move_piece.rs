@@ -209,8 +209,6 @@ fn check_king_move(
         && king.has_moved() == Some(false)
         && new_piece_king_colored
         && !new_piece_moved;
-    println!("a: {is_castling}");
-    println!("b: {:?}", new_piece);
 
     // King can only move one step unless castling
     if (old_square.0.abs_diff(new_square.0) > 1 || old_square.1.abs_diff(new_square.1) > 1)
@@ -233,21 +231,32 @@ fn check_king_move(
             (old_square.0 - 1, old_square.1)
         };
         let king_final_square_piece = board.squares[king_final_square.1][king_final_square.0];
-        println!("d");
         // You cannot pass/capture a piece when castling
         if !matches!(passed_piece, Piece::Empty) || !matches!(king_final_square_piece, Piece::Empty)
         {
             return (false, false);
         }
-        println!("e");
 
         if square_is_checked(board, passed_square, king.is_white() == Some(true)) {
             return (false, false);
         }
-        println!("f");
+
+        // Long castle
+        if x_diff.abs() == 4 {
+            let rook_pass_square = if x_diff < 0 {
+                (new_square.0 - 1, new_square.1)
+            } else {
+                (new_square.0 + 1, new_square.1)
+            };
+            let rook_pass_piece = board.squares[rook_pass_square.1][rook_pass_square.0];
+
+            if !matches!(rook_pass_piece, Piece::Empty) {
+                return (false, false);
+            }
+        }
         return (true, true);
     }
-    println!("g");
+
     let new_square_piece = &board.squares[new_square.0][new_square.1];
 
     if new_square_piece.is_white() == king.is_white() {
