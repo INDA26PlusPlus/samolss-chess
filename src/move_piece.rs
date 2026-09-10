@@ -53,11 +53,12 @@ pub fn move_piece(
         return Err("Move puts own king in check".to_string());
     }
 
+    board.white_turn = !&board.white_turn;
+
     if is_castle {
         board = castle(board, old_square, new_square);
         return Ok(board);
     }
-    board.white_turn = !&board.white_turn;
     board.squares[new_square.1][new_square.0] = board.squares[y][x];
     board.squares[y][x] = Piece::Empty;
     board.history.push((old_square, new_square));
@@ -425,6 +426,10 @@ fn traverse_board(board: &Board, old_square: (usize, usize), new_square: (usize,
 
         // Pieces are the same color
         if temp_piece.is_white() == original_piece.is_white() {
+            return false;
+        }
+
+        if !matches!(temp_piece, Piece::Empty) {
             return false;
         }
 
