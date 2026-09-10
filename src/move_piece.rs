@@ -236,15 +236,15 @@ fn check_knight_move(
     new_square: (usize, usize),
 ) -> bool {
     let x_diff = old_square.0.abs_diff(new_square.0);
-    let y_diff = new_square.1.abs_diff(new_square.1);
+    let y_diff = old_square.1.abs_diff(new_square.1);
 
     let knight = board.squares[old_square.1][old_square.0];
 
     if !matches!(knight, Piece::Knight { .. }) {
         panic!("check_knight_move called for non-knight piece");
     }
-
-    if !(x_diff != 2 && y_diff != 1) && !(x_diff != 1 && y_diff != 2) {
+    println!("{x_diff} {y_diff}");
+    if !(x_diff == 2 && y_diff == 1) && !(x_diff == 1 && y_diff == 2) {
         return false;
     }
 
