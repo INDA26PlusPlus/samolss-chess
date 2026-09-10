@@ -12,6 +12,7 @@ fn main() {
         let (old, new) = handle_input();
         board = move_piece(board, old, new).expect("Fuuck");
         print_board(&board);
+        println!("Is white: {}", board.white_turn);
     }
 }
 

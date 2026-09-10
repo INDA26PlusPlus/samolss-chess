@@ -9,12 +9,16 @@ pub fn move_piece(
     old_square: (usize, usize),
     new_square: (usize, usize),
 ) -> Result<Board, String> {
-    println!("Move_piece");
     let x = old_square.0;
     let y = old_square.1;
     let mut is_castle = false;
 
     let piece = &board.squares[y][x];
+
+    if matches!(piece, Piece::Empty) {
+        return Err("Cannot move an empty square".to_string());
+    }
+
     if Some(board.white_turn) != piece.is_white() {
         return Err("Turn is mismatched".to_string());
     }
@@ -84,7 +88,6 @@ fn square_is_checked(board: &Board, square: (usize, usize), king_is_white: bool)
     let squares = &board.squares;
     for (y, row) in squares.iter().enumerate() {
         for (x, piece) in row.iter().enumerate() {
-            // println!("{:?}", piece);
             if piece.is_white() == Some(king_is_white) {
                 continue;
             }
@@ -319,7 +322,6 @@ fn check_knight_move(
     if !matches!(knight, Piece::Knight { .. }) {
         panic!("check_knight_move called for non-knight piece");
     }
-    println!("{x_diff} {y_diff}");
     if !(x_diff == 2 && y_diff == 1) && !(x_diff == 1 && y_diff == 2) {
         return false;
     }
@@ -429,7 +431,8 @@ fn traverse_board(board: &Board, old_square: (usize, usize), new_square: (usize,
             return false;
         }
 
-        if !matches!(temp_piece, Piece::Empty) {
+        if !matches!(temp_piece, Piece::Empty) && (temp_x != new_square.0 && temp_y != new_square.1)
+        {
             return false;
         }
 
