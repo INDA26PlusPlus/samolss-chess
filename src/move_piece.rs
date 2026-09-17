@@ -733,7 +733,7 @@ fn gen_pawn_moves(
 fn move_is_legal(board: &Board, move_: ((usize, usize), (usize, usize))) -> bool {
     // Checks if the move puts the king in check, i.e the supplied move_ has to be pseudo legal
 
-    let (new_square, old_square) = move_;
+    let (old_square, new_square) = move_;
 
     let mut temp_board = board.clone();
     temp_board.white_turn = !&temp_board.white_turn;
@@ -759,14 +759,17 @@ fn traverse_moves(
     let mut temp_piece = &Piece::Empty;
     let mut temp_x = old_square.0;
     let mut temp_y = old_square.1;
-    while matches!(temp_piece, &Piece::Empty) && temp_x < WIDTH - 1 && temp_y < HEIGHT - 1 {
+    while matches!(temp_piece, &Piece::Empty) && temp_x < WIDTH && temp_y < HEIGHT {
         // temp_x -= x_diff.signum() as usize;
         if x_diff < 0 {
             temp_x += x_diff.signum().abs() as usize;
         } else if temp_x > 0 {
             temp_x -= x_diff.signum().abs() as usize;
-        } else {
-            // Searching outside of board
+        } else if x_diff > 0 {
+            break;
+        }
+
+        if temp_x >= WIDTH {
             break;
         }
         // temp_y -= y_diff.signum() as usize;
@@ -774,8 +777,11 @@ fn traverse_moves(
             temp_y += y_diff.signum().abs() as usize;
         } else if temp_y > 0 {
             temp_y -= y_diff.signum().abs() as usize;
-        } else {
-            // Searching outside board
+        } else if y_diff > 0 {
+            break;
+        }
+
+        if temp_y >= HEIGHT {
             break;
         }
         temp_piece = &board.squares[temp_y][temp_x];

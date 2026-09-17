@@ -7,7 +7,7 @@ use std::{char, io};
 
 fn main() {
     let mut board = create_board();
-    println!("{:?}", perft(&board, 3));
+    println!("{:?}", perft(&board, 4));
     print_board(&board);
     while (true) {
         let (old, new) = handle_input();
