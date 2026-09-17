@@ -1,13 +1,13 @@
 use samolss_chess::{
     board::{self, create_board, print_board},
-    move_piece::{self, gen_all_moves, move_piece},
+    move_piece::{self, gen_all_moves, move_piece, perft},
 };
 
 use std::{char, io};
 
 fn main() {
     let mut board = create_board();
-    println!("{:?}", gen_all_moves(&board).len());
+    println!("{:?}", perft(&board, 3));
     print_board(&board);
     while (true) {
         let (old, new) = handle_input();

@@ -40,6 +40,17 @@ impl Piece {
             Piece::Pawn { has_moved, .. } => Some(*has_moved),
         }
     }
+    pub fn set_moved(&mut self) {
+        match self {
+            Piece::Empty => {}
+            Piece::King { has_moved, .. } => *has_moved = true,
+            Piece::Queen { .. } => {}
+            Piece::Rook { has_moved, .. } => *has_moved = true,
+            Piece::Bishop { .. } => {}
+            Piece::Knight { .. } => {}
+            Piece::Pawn { has_moved, .. } => *has_moved = true,
+        }
+    }
 }
 
 impl fmt::Debug for Piece {

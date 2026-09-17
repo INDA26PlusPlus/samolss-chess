@@ -15,7 +15,7 @@ pub fn move_piece(
     let y = old_square.1;
     let mut is_castle = false;
 
-    let piece = &board.squares[y][x];
+    let mut piece = board.squares[y][x];
 
     if matches!(piece, Piece::Empty) {
         return Err("Cannot move an empty square".to_string());
@@ -66,6 +66,7 @@ pub fn move_piece(
         return Ok(board);
     }
     board.squares[new_square.1][new_square.0] = board.squares[y][x];
+    board.squares[new_square.1][new_square.0].set_moved();
     board.squares[y][x] = Piece::Empty;
     board.history.push((old_square, new_square));
     return Ok(board);
@@ -224,6 +225,10 @@ fn check_king_move(
     }
 
     if is_castling {
+        if square_is_checked(board, old_square, king.is_white() == Some(true)) {
+            return (false, false);
+        }
+
         // When castling the king should only move 2 squares, unless some spinoff is being played
         let passed_square = if x_diff < 0 {
             (old_square.0 + 1, old_square.1)
@@ -461,10 +466,12 @@ fn castle(mut board: Board, old_square: (usize, usize), new_square: (usize, usiz
 
     // Move king
     board.squares[new_king_square.1][new_king_square.0] = board.squares[old_square.1][old_square.0];
+    board.squares[new_king_square.1][new_king_square.0].set_moved();
     board.squares[old_square.1][old_square.0] = Piece::Empty;
 
     //Move rook
     board.squares[new_rook_square.1][new_rook_square.0] = board.squares[new_square.1][new_square.0];
+    board.squares[new_rook_square.1][new_rook_square.0].set_moved();
     board.squares[new_square.1][new_square.0] = Piece::Empty;
 
     board.history.push((old_square, new_square));
@@ -512,7 +519,7 @@ fn gen_king_moves(
     let king_diffs: [(isize, isize); 12] = [
         (-1, -1),
         (-1, 0),
-        (-1, -1),
+        (-1, 1),
         (0, -1),
         (0, 1),
         (1, -1),
@@ -569,7 +576,7 @@ fn gen_queen_moves(
     let dirs: [(isize, isize); 8] = [
         (-1, -1),
         (-1, 0),
-        (-1, -1),
+        (-1, 1),
         (0, -1),
         (0, 1),
         (1, -1),
@@ -752,7 +759,7 @@ fn traverse_moves(
     let mut temp_piece = &Piece::Empty;
     let mut temp_x = old_square.0;
     let mut temp_y = old_square.1;
-    while matches!(temp_piece, &Piece::Empty) && temp_x < WIDTH && temp_y < HEIGHT {
+    while matches!(temp_piece, &Piece::Empty) && temp_x < WIDTH - 1 && temp_y < HEIGHT - 1 {
         // temp_x -= x_diff.signum() as usize;
         if x_diff < 0 {
             temp_x += x_diff.signum().abs() as usize;
@@ -785,4 +792,24 @@ fn traverse_moves(
         }
     }
     return pseudo_legal_moves;
+}
+
+// Shoutout Tommy Bergman: https://discord.com/channels/1544637088073257010/1545350465435209759/1547720549000548423
+// perft(board, depth):
+//     if depth == 0: return 1 /* lövnod */
+//     nodes = 0
+//     for move in gen_moves(board):
+//         nodes = nodes + perft(move.new_board, depth - 1)
+//     return nodes
+pub fn perft(board: &Board, depth: i32) -> i32 {
+    if depth == 0 {
+        return 1;
+    }
+    let mut nodes = 0;
+    for move_ in gen_all_moves(board) {
+        let mut temp_board = board.clone();
+        temp_board = move_piece(temp_board, move_.0, move_.1).expect("Fuuuuuuuuuuuuuuuck");
+        nodes = nodes + perft(&temp_board, depth - 1);
+    }
+    return nodes;
 }
