@@ -1,11 +1,7 @@
-use std::io::ErrorKind::InvalidData;
-
-use crate::board;
 use crate::board::Board;
 use crate::board::HEIGHT;
 use crate::board::Piece;
 use crate::board::WIDTH;
-use crate::board::print_board;
 
 pub fn move_piece(
     mut board: Board,
