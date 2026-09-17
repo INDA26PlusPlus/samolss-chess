@@ -5,6 +5,7 @@ use crate::board::Board;
 use crate::board::HEIGHT;
 use crate::board::Piece;
 use crate::board::WIDTH;
+use crate::board::print_board;
 
 pub fn move_piece(
     mut board: Board,
@@ -434,8 +435,7 @@ fn traverse_board(board: &Board, old_square: (usize, usize), new_square: (usize,
         if temp_piece.is_white() == original_piece.is_white() {
             return false;
         }
-
-        if !matches!(temp_piece, Piece::Empty) && (temp_x != new_square.0 && temp_y != new_square.1)
+        if !matches!(temp_piece, Piece::Empty) && (temp_x != new_square.0 || temp_y != new_square.1)
         {
             return false;
         }
