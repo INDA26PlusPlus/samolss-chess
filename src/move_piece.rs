@@ -1,7 +1,6 @@
 use crate::board::Board;
 use crate::board::HEIGHT;
 use crate::board::Piece;
-use crate::board::Piece::Pawn;
 use crate::board::WIDTH;
 
 pub fn move_piece(
@@ -14,7 +13,7 @@ pub fn move_piece(
     let y = old_square.1;
     let mut is_castle = false;
 
-    let mut piece = board.squares[y][x];
+    let piece = board.squares[y][x];
 
     if matches!(piece, Piece::Empty) {
         return Err("Cannot move an empty square".to_string());
@@ -434,7 +433,7 @@ fn check_pawn_move(board: &Board, old_square: (usize, usize), new_square: (usize
             // You cannot take an empty piece (this will change a bit with en passasnt)
             let last_move = match board.history.last() {
                 Some(last) => last,
-                None => &((0 as usize, 0 as usize), (0 as usize, 0 as usize)),
+                None => &((0, 0), (0, 0)),
             };
 
             let last_move_y_diff = last_move.0.1.abs_diff(last_move.1.1);
