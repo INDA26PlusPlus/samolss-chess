@@ -1,6 +1,7 @@
 use crate::board::Board;
 use crate::board::HEIGHT;
 use crate::board::Piece;
+use crate::board::Piece::Pawn;
 use crate::board::WIDTH;
 
 pub fn move_piece(
@@ -379,10 +380,27 @@ fn check_pawn_move(board: &Board, old_square: (usize, usize), new_square: (usize
     }
     if y_diff.abs() == 1 {
         if x_diff == 1 {
-            let piece_to_take = board.squares[new_square.1][new_square.0];
-            // You cannot take an empty piece (this will change a bit with en passasnt) or the king
-            if matches!(piece_to_take, Piece::Empty) || matches!(piece_to_take, Piece::King { .. })
-            {
+            let mut piece_to_take = board.squares[new_square.1][new_square.0];
+            // You cannot take an empty piece (this will change a bit with en passasnt)
+            let last_move = match board.history.last() {
+                Some(last) => last,
+                None => &((0 as usize, 0 as usize), (0 as usize, 0 as usize)),
+            };
+
+            let last_move_y_diff = last_move.0.1.abs_diff(last_move.1.1);
+
+            let last_move_piece = board.squares[last_move.1.1][last_move.1.0];
+
+            let is_enpassant = last_move_y_diff == 2
+                && last_move.1.0 == new_square.0
+                && last_move.1.1 == old_square.1
+                && matches!(last_move_piece, Piece::Pawn { .. });
+
+            if is_enpassant {
+                piece_to_take = last_move_piece;
+            }
+
+            if matches!(piece_to_take, Piece::Empty) {
                 return false;
             }
 

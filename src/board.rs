@@ -1,4 +1,5 @@
-use std::fmt;
+use core::panic::PanicInfo;
+use std::{fmt, string};
 
 pub const WIDTH: usize = 8;
 pub const HEIGHT: usize = 8;
@@ -98,159 +99,381 @@ pub struct Board {
     pub history: Vec<((usize, usize), (usize, usize))>,
 }
 
-pub fn create_board() -> Board {
-    Board {
-        white_turn: true,
-        history: Vec::new(),
-        squares: [
-            [
-                Piece::Rook {
-                    is_white: true,
-                    has_moved: false,
-                },
-                Piece::Knight { is_white: true },
-                Piece::Bishop { is_white: true },
-                Piece::Queen { is_white: true },
-                Piece::King {
-                    is_white: true,
-                    has_moved: false,
-                },
-                Piece::Bishop { is_white: true },
-                Piece::Knight { is_white: true },
-                Piece::Rook {
-                    is_white: true,
-                    has_moved: false,
-                },
-            ],
-            [
-                Piece::Pawn {
-                    is_white: true,
-                    has_moved: false,
-                },
-                Piece::Pawn {
-                    is_white: true,
-                    has_moved: false,
-                },
-                Piece::Pawn {
-                    is_white: true,
-                    has_moved: false,
-                },
-                Piece::Pawn {
-                    is_white: true,
-                    has_moved: false,
-                },
-                Piece::Pawn {
-                    is_white: true,
-                    has_moved: false,
-                },
-                Piece::Pawn {
-                    is_white: true,
-                    has_moved: false,
-                },
-                Piece::Pawn {
-                    is_white: true,
-                    has_moved: false,
-                },
-                Piece::Pawn {
-                    is_white: true,
-                    has_moved: false,
-                },
-            ],
-            [
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-            ],
-            [
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-            ],
-            [
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-            ],
-            [
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-                Piece::Empty,
-            ],
-            [
-                Piece::Pawn {
-                    is_white: false,
-                    has_moved: false,
-                },
-                Piece::Pawn {
-                    is_white: false,
-                    has_moved: false,
-                },
-                Piece::Pawn {
-                    is_white: false,
-                    has_moved: false,
-                },
-                Piece::Pawn {
-                    is_white: false,
-                    has_moved: false,
-                },
-                Piece::Pawn {
-                    is_white: false,
-                    has_moved: false,
-                },
-                Piece::Pawn {
-                    is_white: false,
-                    has_moved: false,
-                },
-                Piece::Pawn {
-                    is_white: false,
-                    has_moved: false,
-                },
-                Piece::Pawn {
-                    is_white: false,
-                    has_moved: false,
-                },
-            ],
-            [
-                Piece::Rook {
-                    is_white: false,
-                    has_moved: false,
-                },
-                Piece::Knight { is_white: false },
-                Piece::Bishop { is_white: false },
-                Piece::Queen { is_white: false },
-                Piece::King {
-                    is_white: false,
-                    has_moved: false,
-                },
-                Piece::Bishop { is_white: false },
-                Piece::Knight { is_white: false },
-                Piece::Rook {
-                    is_white: false,
-                    has_moved: false,
-                },
-            ],
-        ],
+pub fn create_board(fen_string: String) -> Board {
+    let mut fen_parts = fen_string.split(" ");
+    let (
+        Some(positions),
+        Some(turn),
+        Some(castles),
+        Some(en_passant_square),
+        Some(half_move_clock),
+        Some(full_move_clock),
+    ) = (
+        fen_parts.next(),
+        fen_parts.next(),
+        fen_parts.next(),
+        fen_parts.next(),
+        fen_parts.next(),
+        fen_parts.next(),
+    )
+    else {
+        panic!("Invalid fen string")
+    };
+
+    let white_turn = turn == "w";
+
+    let castle_parts = castles.chars();
+    let mut castle_sides = [false, false, false, false];
+    for castle in castle_parts {
+        match castle {
+            'K' => castle_sides[0] = true,
+            'Q' => castle_sides[1] = true,
+            'k' => castle_sides[2] = true,
+            'q' => castle_sides[3] = true,
+            '-' => continue,
+            _ => panic!("Bad castle"),
+        }
     }
+
+    let mut history: Vec<((usize, usize), (usize, usize))> = Vec::new();
+
+    if en_passant_square != "-" {
+        let mut en_passant_coords = en_passant_square.chars();
+        let (Some(en_passant_y_char), Some(en_passant_x_char)) =
+            (en_passant_coords.next(), en_passant_coords.next())
+        else {
+            panic!("Bad en passant fen String");
+        };
+
+        let en_passant_x = match en_passant_y_char {
+            'a' => 0 as usize,
+            'b' => 1 as usize,
+            'c' => 2 as usize,
+            'd' => 3 as usize,
+            'e' => 4 as usize,
+            'f' => 5 as usize,
+            'g' => 6 as usize,
+            'h' => 7 as usize,
+            _ => panic!("Bad en passant square"),
+        };
+        let en_passant_y = en_passant_x_char
+            .to_digit(10)
+            .expect("Bad en passant square") as usize
+            - 1;
+
+        history.push((
+            (
+                en_passant_x,
+                if white_turn {
+                    en_passant_y + 1
+                } else {
+                    en_passant_y - 1
+                },
+            ),
+            (
+                en_passant_x,
+                if white_turn {
+                    en_passant_y - 1
+                } else {
+                    en_passant_y + 1
+                },
+            ),
+        ));
+    }
+
+    let rows = positions.split("/");
+    let mut squares: [[Piece; 8]; 8] = [
+        [
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+        ],
+        [
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+        ],
+        [
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+        ],
+        [
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+        ],
+        [
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+        ],
+        [
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+        ],
+        [
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+        ],
+        [
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+            Piece::Empty,
+        ],
+    ];
+    for (y, row) in rows.enumerate() {
+        let mut skip = 0;
+        let mut x: usize = 0 as usize;
+        for (x_, piece) in row.chars().enumerate() {
+            if let Some(skips) = piece.to_digit(10) {
+                x += skips as usize;
+                continue;
+            }
+
+            println!("{}", &piece);
+            println!("|{}|", row);
+
+            let new_piece = match piece {
+                'K' => Piece::King {
+                    is_white: true,
+                    has_moved: false,
+                },
+                'Q' => Piece::Queen { is_white: true },
+                'R' => Piece::Rook {
+                    is_white: true,
+                    has_moved: !(y == 7
+                        && ((x == 0 && castle_sides[1]) || (x == 7 && castle_sides[0]))),
+                },
+                'B' => Piece::Bishop { is_white: true },
+                'N' => Piece::Knight { is_white: true },
+                'P' => Piece::Pawn {
+                    is_white: true,
+                    has_moved: y != 6,
+                },
+                'k' => Piece::King {
+                    is_white: false,
+                    has_moved: false,
+                },
+                'q' => Piece::Queen { is_white: false },
+                'r' => Piece::Rook {
+                    is_white: false,
+                    has_moved: !(y == 0
+                        && ((x == 0 && castle_sides[3]) || (x == 7 && castle_sides[2]))),
+                },
+                'b' => Piece::Bishop { is_white: false },
+                'n' => Piece::Knight { is_white: false },
+                'p' => Piece::Pawn {
+                    is_white: false,
+                    has_moved: y != 1,
+                },
+                _ => panic!("Bad Pieces"),
+            };
+            println!("{}", x);
+            squares[7 - y][x] = new_piece;
+            x += 1;
+        }
+    }
+    println!("{}", positions);
+    return Board {
+        white_turn: white_turn,
+        history: history,
+        squares: squares,
+    };
+    // Board {
+    //     white_turn: true,
+    //     history: Vec::new(),
+    //     squares: [
+    //         [
+    //             Piece::Rook {
+    //                 is_white: true,
+    //                 has_moved: false,
+    //             },
+    //             Piece::Knight { is_white: true },
+    //             Piece::Bishop { is_white: true },
+    //             Piece::Queen { is_white: true },
+    //             Piece::King {
+    //                 is_white: true,
+    //                 has_moved: false,
+    //             },
+    //             Piece::Bishop { is_white: true },
+    //             Piece::Knight { is_white: true },
+    //             Piece::Rook {
+    //                 is_white: true,
+    //                 has_moved: false,
+    //             },
+    //         ],
+    //         [
+    //             Piece::Pawn {
+    //                 is_white: true,
+    //                 has_moved: false,
+    //             },
+    //             Piece::Pawn {
+    //                 is_white: true,
+    //                 has_moved: false,
+    //             },
+    //             Piece::Pawn {
+    //                 is_white: true,
+    //                 has_moved: false,
+    //             },
+    //             Piece::Pawn {
+    //                 is_white: true,
+    //                 has_moved: false,
+    //             },
+    //             Piece::Pawn {
+    //                 is_white: true,
+    //                 has_moved: false,
+    //             },
+    //             Piece::Pawn {
+    //                 is_white: true,
+    //                 has_moved: false,
+    //             },
+    //             Piece::Pawn {
+    //                 is_white: true,
+    //                 has_moved: false,
+    //             },
+    //             Piece::Pawn {
+    //                 is_white: true,
+    //                 has_moved: false,
+    //             },
+    //         ],
+    //         [
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //         ],
+    //         [
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //         ],
+    //         [
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //         ],
+    //         [
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //             Piece::Empty,
+    //         ],
+    //         [
+    //             Piece::Pawn {
+    //                 is_white: false,
+    //                 has_moved: false,
+    //             },
+    //             Piece::Pawn {
+    //                 is_white: false,
+    //                 has_moved: false,
+    //             },
+    //             Piece::Pawn {
+    //                 is_white: false,
+    //                 has_moved: false,
+    //             },
+    //             Piece::Pawn {
+    //                 is_white: false,
+    //                 has_moved: false,
+    //             },
+    //             Piece::Pawn {
+    //                 is_white: false,
+    //                 has_moved: false,
+    //             },
+    //             Piece::Pawn {
+    //                 is_white: false,
+    //                 has_moved: false,
+    //             },
+    //             Piece::Pawn {
+    //                 is_white: false,
+    //                 has_moved: false,
+    //             },
+    //             Piece::Pawn {
+    //                 is_white: false,
+    //                 has_moved: false,
+    //             },
+    //         ],
+    //         [
+    //             Piece::Rook {
+    //                 is_white: false,
+    //                 has_moved: false,
+    //             },
+    //             Piece::Knight { is_white: false },
+    //             Piece::Bishop { is_white: false },
+    //             Piece::Queen { is_white: false },
+    //             Piece::King {
+    //                 is_white: false,
+    //                 has_moved: false,
+    //             },
+    //             Piece::Bishop { is_white: false },
+    //             Piece::Knight { is_white: false },
+    //             Piece::Rook {
+    //                 is_white: false,
+    //                 has_moved: false,
+    //             },
+    //         ],
+    //     ],
+    // }
 }
 
 pub fn print_board(board: &Board) {
