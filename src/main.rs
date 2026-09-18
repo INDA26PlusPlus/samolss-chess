@@ -6,13 +6,9 @@ use samolss_chess::{
 use std::{char, io};
 
 fn main() {
-    let mut board = create_board(
-        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 0".to_string(),
-    );
-    // let mut board =
-    //     create_board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".to_string());
+    let mut board =
+        create_board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".to_string());
     print_board(&board);
-    println!("{:?}", perft(&board, 5));
     while (true) {
         let (old, new) = handle_input();
         board = move_piece(board, old, new, 'q').expect("Fuuck");
