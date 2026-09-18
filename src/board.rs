@@ -97,6 +97,9 @@ pub struct Board {
     pub white_turn: bool,
     pub squares: [[Piece; WIDTH]; HEIGHT],
     pub history: Vec<((usize, usize), (usize, usize))>,
+    pub white_lost: bool,
+    pub black_lost: bool,
+    pub is_draw: bool,
 }
 
 pub fn create_board(fen_string: String) -> Board {
@@ -273,9 +276,6 @@ pub fn create_board(fen_string: String) -> Board {
                 continue;
             }
 
-            println!("{}", &piece);
-            println!("|{}|", row);
-
             let new_piece = match piece {
                 'K' => Piece::King {
                     is_white: true,
@@ -311,16 +311,17 @@ pub fn create_board(fen_string: String) -> Board {
                 },
                 _ => panic!("Bad Pieces"),
             };
-            println!("{}", x);
             squares[7 - y][x] = new_piece;
             x += 1;
         }
     }
-    println!("{}", positions);
     return Board {
         white_turn: white_turn,
         history: history,
         squares: squares,
+        white_lost: false,
+        black_lost: false,
+        is_draw: false,
     };
     // Board {
     //     white_turn: true,

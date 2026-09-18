@@ -12,10 +12,10 @@ fn main() {
     // let mut board =
     //     create_board("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1".to_string());
     print_board(&board);
-    println!("{:?}", perft(&board, 1));
+    println!("{:?}", perft(&board, 5));
     while (true) {
         let (old, new) = handle_input();
-        board = move_piece(board, old, new).expect("Fuuck");
+        board = move_piece(board, old, new, 'q').expect("Fuuck");
         print_board(&board);
         println!("Is white: {}", board.white_turn);
     }

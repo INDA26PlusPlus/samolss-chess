@@ -8,6 +8,7 @@ pub fn move_piece(
     mut board: Board,
     old_square: (usize, usize),
     new_square: (usize, usize),
+    promotion_piece: char,
 ) -> Result<Board, String> {
     let x = old_square.0;
     let y = old_square.1;
@@ -42,6 +43,14 @@ pub fn move_piece(
     if !move_allowed {
         return Err("Move not allowed".to_string());
     }
+    let mut is_enpassant = false;
+    if matches!(piece, Piece::Pawn { .. }) {
+        let x_diff = old_square.0 as isize - new_square.0 as isize;
+        if x_diff != 0 {
+            let taken_piece = board.squares[new_square.1][new_square.0];
+            is_enpassant = matches!(taken_piece, Piece::Empty);
+        }
+    }
 
     let mut temp_board = board.clone();
     temp_board.white_turn = !&temp_board.white_turn;
@@ -51,6 +60,10 @@ pub fn move_piece(
         temp_board.squares[new_square.1][new_square.0] = temp_board.squares[y][x];
         temp_board.squares[y][x] = Piece::Empty;
         temp_board.history.push((old_square, new_square));
+    }
+
+    if is_enpassant {
+        temp_board.squares[old_square.1][new_square.0] = Piece::Empty;
     }
 
     if king_is_checked(&temp_board, !temp_board.white_turn) {
@@ -63,10 +76,47 @@ pub fn move_piece(
         board = castle(board, old_square, new_square);
         return Ok(board);
     }
+
+    if matches!(piece, Piece::Pawn { .. })
+        && ((!board.white_turn && new_square.1 == 7) || (board.white_turn && new_square.1 == 0))
+    {
+        board.squares[y][x] = match promotion_piece {
+            'q' => Piece::Queen {
+                is_white: !board.white_turn,
+            },
+            'r' => Piece::Rook {
+                is_white: !board.white_turn,
+                has_moved: true,
+            },
+            'b' => Piece::Bishop {
+                is_white: !board.white_turn,
+            },
+            'n' => Piece::Knight {
+                is_white: !board.white_turn,
+            },
+            _ => panic!("Bad promtion piece"),
+        }
+    }
     board.squares[new_square.1][new_square.0] = board.squares[y][x];
     board.squares[new_square.1][new_square.0].set_moved();
     board.squares[y][x] = Piece::Empty;
+    if is_enpassant {
+        board.squares[y][new_square.0] = Piece::Empty;
+    }
     board.history.push((old_square, new_square));
+
+    let num_available_moves = gen_all_moves(&board).len();
+    let king_in_check = king_is_checked(&board, board.white_turn);
+
+    if num_available_moves == 0 && king_in_check {
+        board.white_lost = board.white_turn;
+        board.black_lost = !board.white_turn;
+    }
+
+    if num_available_moves == 0 {
+        board.is_draw = true;
+    }
+
     return Ok(board);
 }
 
@@ -237,7 +287,7 @@ fn check_king_move(
         let king_final_square = if x_diff < 0 {
             (passed_square.0 + 1, old_square.1)
         } else {
-            (old_square.0 - 1, old_square.1)
+            (passed_square.0 - 1, old_square.1)
         };
         let king_final_square_piece = board.squares[king_final_square.1][king_final_square.0];
         // You cannot pass/capture a piece when castling
@@ -493,8 +543,8 @@ fn castle(mut board: Board, old_square: (usize, usize), new_square: (usize, usiz
     return board;
 }
 
-pub fn gen_all_moves(board: &Board) -> Vec<((usize, usize), (usize, usize))> {
-    let mut valid_moves: Vec<((usize, usize), (usize, usize))> = Vec::new();
+pub fn gen_all_moves(board: &Board) -> Vec<((usize, usize), (usize, usize), char)> {
+    let mut valid_moves: Vec<((usize, usize), (usize, usize), char)> = Vec::new();
 
     for (y, row) in board.squares.iter().enumerate() {
         for (x, piece) in row.iter().enumerate() {
@@ -510,7 +560,7 @@ pub fn gen_all_moves(board: &Board) -> Vec<((usize, usize), (usize, usize))> {
 pub fn gen_moves_for_piece(
     board: &Board,
     square: (usize, usize),
-) -> Vec<((usize, usize), (usize, usize))> {
+) -> Vec<((usize, usize), (usize, usize), char)> {
     let piece = &board.squares[square.1][square.0];
     let moves = match piece {
         Piece::Empty => vec![],
@@ -528,9 +578,9 @@ pub fn gen_moves_for_piece(
 fn gen_king_moves(
     board: &Board,
     king_square: (usize, usize),
-) -> Vec<((usize, usize), (usize, usize))> {
+) -> Vec<((usize, usize), (usize, usize), char)> {
     // All different coordinate diffs a king can move (including castleing)
-    let king_diffs: [(isize, isize); 12] = [
+    let king_diffs: [(isize, isize); 14] = [
         (-1, -1),
         (-1, 0),
         (-1, 1),
@@ -543,9 +593,11 @@ fn gen_king_moves(
         (-2, 0),
         (3, 0),
         (-3, 0),
+        (-4, 0),
+        (4, 0),
     ];
 
-    let mut valid_moves: Vec<((usize, usize), (usize, usize))> = Vec::new();
+    let mut valid_moves: Vec<((usize, usize), (usize, usize), char)> = Vec::new();
 
     for diff in king_diffs {
         let new_square = (
@@ -578,7 +630,7 @@ fn gen_king_moves(
             continue;
         }
 
-        valid_moves.push((king_square, new_square));
+        valid_moves.push((king_square, new_square, 'q'));
     }
     return valid_moves;
 }
@@ -586,7 +638,7 @@ fn gen_king_moves(
 fn gen_queen_moves(
     board: &Board,
     queen_square: (usize, usize),
-) -> Vec<((usize, usize), (usize, usize))> {
+) -> Vec<((usize, usize), (usize, usize), char)> {
     let dirs: [(isize, isize); 8] = [
         (-1, -1),
         (-1, 0),
@@ -598,15 +650,15 @@ fn gen_queen_moves(
         (1, 1),
     ];
 
-    let mut pseudo_legal_moves: Vec<((usize, usize), (usize, usize))> = Vec::new();
-    let mut valid_moves: Vec<((usize, usize), (usize, usize))> = Vec::new();
+    let mut pseudo_legal_moves: Vec<((usize, usize), (usize, usize), char)> = Vec::new();
+    let mut valid_moves: Vec<((usize, usize), (usize, usize), char)> = Vec::new();
 
     for dir in dirs {
         pseudo_legal_moves.append(&mut traverse_moves(&board, queen_square, dir));
     }
 
     for move_ in pseudo_legal_moves {
-        if !move_is_legal(&board, move_) {
+        if !move_is_legal(&board, (move_.0, move_.1), false) {
             continue;
         }
 
@@ -619,18 +671,18 @@ fn gen_queen_moves(
 fn gen_rook_moves(
     board: &Board,
     rook_square: (usize, usize),
-) -> Vec<((usize, usize), (usize, usize))> {
+) -> Vec<((usize, usize), (usize, usize), char)> {
     let dirs: [(isize, isize); 4] = [(-1, 0), (0, -1), (0, 1), (1, 0)];
 
-    let mut pseudo_legal_moves: Vec<((usize, usize), (usize, usize))> = Vec::new();
-    let mut valid_moves: Vec<((usize, usize), (usize, usize))> = Vec::new();
+    let mut pseudo_legal_moves: Vec<((usize, usize), (usize, usize), char)> = Vec::new();
+    let mut valid_moves: Vec<((usize, usize), (usize, usize), char)> = Vec::new();
 
     for dir in dirs {
         pseudo_legal_moves.append(&mut traverse_moves(&board, rook_square, dir));
     }
 
     for move_ in pseudo_legal_moves {
-        if !move_is_legal(&board, move_) {
+        if !move_is_legal(&board, (move_.0, move_.1), false) {
             continue;
         }
         valid_moves.push(move_);
@@ -642,18 +694,18 @@ fn gen_rook_moves(
 fn gen_bishop_moves(
     board: &Board,
     bishop_square: (usize, usize),
-) -> Vec<((usize, usize), (usize, usize))> {
+) -> Vec<((usize, usize), (usize, usize), char)> {
     let dirs: [(isize, isize); 4] = [(-1, -1), (-1, 1), (1, -1), (1, 1)];
 
-    let mut pseudo_legal_moves: Vec<((usize, usize), (usize, usize))> = Vec::new();
-    let mut valid_moves: Vec<((usize, usize), (usize, usize))> = Vec::new();
+    let mut pseudo_legal_moves: Vec<((usize, usize), (usize, usize), char)> = Vec::new();
+    let mut valid_moves: Vec<((usize, usize), (usize, usize), char)> = Vec::new();
 
     for dir in dirs {
         pseudo_legal_moves.append(&mut traverse_moves(&board, bishop_square, dir));
     }
 
     for move_ in pseudo_legal_moves {
-        if !move_is_legal(&board, move_) {
+        if !move_is_legal(&board, (move_.0, move_.1), false) {
             continue;
         }
         valid_moves.push(move_);
@@ -665,7 +717,7 @@ fn gen_bishop_moves(
 fn gen_knight_moves(
     board: &Board,
     knight_square: (usize, usize),
-) -> Vec<((usize, usize), (usize, usize))> {
+) -> Vec<((usize, usize), (usize, usize), char)> {
     let move_diffs: [(isize, isize); 8] = [
         (-2, 1),
         (-2, -1),
@@ -677,7 +729,7 @@ fn gen_knight_moves(
         (2, 1),
     ];
 
-    let mut valid_moves: Vec<((usize, usize), (usize, usize))> = Vec::new();
+    let mut valid_moves: Vec<((usize, usize), (usize, usize), char)> = Vec::new();
 
     for diff in move_diffs {
         let new_square = (
@@ -692,11 +744,11 @@ fn gen_knight_moves(
             continue;
         }
 
-        if !move_is_legal(&board, (knight_square, new_square)) {
+        if !move_is_legal(&board, (knight_square, new_square), false) {
             continue;
         }
 
-        valid_moves.push((knight_square, new_square));
+        valid_moves.push((knight_square, new_square, 'q'));
     }
 
     return valid_moves;
@@ -705,7 +757,7 @@ fn gen_knight_moves(
 fn gen_pawn_moves(
     board: &Board,
     pawn_square: (usize, usize),
-) -> Vec<((usize, usize), (usize, usize))> {
+) -> Vec<((usize, usize), (usize, usize), char)> {
     let pawn = board.squares[pawn_square.1][pawn_square.0];
     let forward_dir = if pawn.is_white() == Some(true) {
         1 as isize
@@ -719,13 +771,20 @@ fn gen_pawn_moves(
         (1 as isize, forward_dir),
     ];
 
-    let mut valid_moves: Vec<((usize, usize), (usize, usize))> = Vec::new();
+    let mut valid_moves: Vec<((usize, usize), (usize, usize), char)> = Vec::new();
 
     for diff in move_diffs {
         let new_square = (
             (pawn_square.0 as isize + diff.0) as usize,
             (pawn_square.1 as isize + diff.1) as usize,
         );
+
+        if new_square.1 >= HEIGHT || new_square.0 >= WIDTH {
+            continue;
+        }
+        let is_enpassant = diff.0.abs() == 1
+            && diff.1.abs() == 1
+            && matches!(board.squares[new_square.1][new_square.0], Piece::Empty);
 
         if new_square.0 > 7 || new_square.1 > 7 {
             continue;
@@ -735,16 +794,25 @@ fn gen_pawn_moves(
             continue;
         }
 
-        if !move_is_legal(&board, (pawn_square, new_square)) {
+        if !move_is_legal(&board, (pawn_square, new_square), is_enpassant) {
             continue;
         }
-
-        valid_moves.push((pawn_square, new_square));
+        if new_square.1 == 7 || new_square.1 == 0 {
+            for promotion_piece in ['q', 'r', 'b', 'n'] {
+                valid_moves.push((pawn_square, new_square, promotion_piece));
+            }
+        } else {
+            valid_moves.push((pawn_square, new_square, 'q'));
+        }
     }
     return valid_moves;
 }
 
-fn move_is_legal(board: &Board, move_: ((usize, usize), (usize, usize))) -> bool {
+fn move_is_legal(
+    board: &Board,
+    move_: ((usize, usize), (usize, usize)),
+    is_enpassant: bool,
+) -> bool {
     // Checks if the move puts the king in check, i.e the supplied move_ has to be pseudo legal
 
     let (old_square, new_square) = move_;
@@ -754,6 +822,9 @@ fn move_is_legal(board: &Board, move_: ((usize, usize), (usize, usize))) -> bool
 
     temp_board.squares[new_square.1][new_square.0] = temp_board.squares[old_square.1][old_square.0];
     temp_board.squares[old_square.1][old_square.0] = Piece::Empty;
+    if is_enpassant {
+        temp_board.squares[old_square.1][new_square.0] = Piece::Empty;
+    }
     temp_board.history.push((old_square, new_square));
 
     return !king_is_checked(&temp_board, !temp_board.white_turn);
@@ -763,8 +834,8 @@ fn traverse_moves(
     board: &Board,
     old_square: (usize, usize),
     direction: (isize, isize),
-) -> Vec<((usize, usize), (usize, usize))> {
-    let mut pseudo_legal_moves: Vec<((usize, usize), (usize, usize))> = Vec::new();
+) -> Vec<((usize, usize), (usize, usize), char)> {
+    let mut pseudo_legal_moves: Vec<((usize, usize), (usize, usize), char)> = Vec::new();
 
     let x_diff = direction.0;
     let y_diff = direction.1;
@@ -805,7 +876,7 @@ fn traverse_moves(
             break;
         }
 
-        pseudo_legal_moves.push(((old_square.0, old_square.1), (temp_x, temp_y)));
+        pseudo_legal_moves.push(((old_square.0, old_square.1), (temp_x, temp_y), 'q'));
 
         if !matches!(temp_piece, Piece::Empty) {
             break;
@@ -828,7 +899,7 @@ pub fn perft(board: &Board, depth: i32) -> i32 {
     let mut nodes = 0;
     for move_ in gen_all_moves(board) {
         let mut temp_board = board.clone();
-        temp_board = move_piece(temp_board, move_.0, move_.1).expect("Fuuuuuuuuuuuuuuuck");
+        temp_board = move_piece(temp_board, move_.0, move_.1, move_.2).expect("Fuuuuuuuuuuuuuuuck");
         nodes = nodes + perft(&temp_board, depth - 1);
     }
     return nodes;
