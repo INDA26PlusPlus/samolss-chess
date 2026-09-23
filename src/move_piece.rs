@@ -12,6 +12,7 @@ pub fn move_piece(
     let x = old_square.0;
     let y = old_square.1;
     let mut is_castle = false;
+    let mut is_enpassant = false;
 
     let piece = board.squares[y][x];
 
@@ -35,20 +36,16 @@ pub fn move_piece(
         Piece::Rook { .. } => check_rook_move(&board, old_square, new_square),
         Piece::Bishop { .. } => check_bishop_move(&board, old_square, new_square),
         Piece::Knight { .. } => check_knight_move(&board, old_square, new_square),
-        Piece::Pawn { .. } => check_pawn_move(&board, old_square, new_square),
+        Piece::Pawn { .. } => {
+            let (move_allowed, is_enpassant_) = check_pawn_move(&board, old_square, new_square);
+            is_enpassant = is_enpassant_;
+            move_allowed
+        }
         Piece::Empty => false,
     };
 
     if !move_allowed {
         return Err("Move not allowed".to_string());
-    }
-    let mut is_enpassant = false;
-    if matches!(piece, Piece::Pawn { .. }) {
-        let x_diff = old_square.0 as isize - new_square.0 as isize;
-        if x_diff != 0 {
-            let taken_piece = board.squares[new_square.1][new_square.0];
-            is_enpassant = matches!(taken_piece, Piece::Empty);
-        }
     }
 
     let mut temp_board = board.clone();
@@ -387,7 +384,12 @@ fn check_knight_move(
     return true;
 }
 
-fn check_pawn_move(board: &Board, old_square: (usize, usize), new_square: (usize, usize)) -> bool {
+fn check_pawn_move(
+    board: &Board,
+    old_square: (usize, usize),
+    new_square: (usize, usize),
+) -> (bool, bool) {
+    // Returns whether the move is alloed and whether it is enpassant
     let x_diff = old_square.0.abs_diff(new_square.0);
     let y_diff = old_square.1 as isize - new_square.1 as isize;
 
@@ -396,36 +398,39 @@ fn check_pawn_move(board: &Board, old_square: (usize, usize), new_square: (usize
     if !matches!(pawn, Piece::Pawn { .. }) {
         panic!("check pawn move called on non-pawn piece")
     }
+    if x_diff.abs_diff(0) > 1 {
+        return (false, false);
+    }
 
     // Pawn is going the wrong way
     if (y_diff < 0 && pawn.is_white() != Some(true))
         || (y_diff > 0 && pawn.is_white() == Some(true))
     {
-        return false;
+        return (false, false);
     }
 
     if y_diff.abs() > 2 {
-        return false;
+        return (false, false);
     }
     if y_diff.abs() == 2 {
         if pawn.has_moved() == Some(true) {
-            return false;
+            return (false, false);
         }
         if x_diff != 0 {
-            return false;
+            return (false, false);
         }
         let passed_y = (old_square.1 as isize - y_diff / 2) as usize;
         let passed_x = old_square.0;
         let passed_square = board.squares[passed_y][passed_x];
 
         if !matches!(passed_square, Piece::Empty) {
-            return false;
+            return (false, false);
         }
 
         if !matches!(board.squares[new_square.1][new_square.0], Piece::Empty) {
-            return false;
+            return (false, false);
         }
-        return true;
+        return (true, false);
     }
     if y_diff.abs() == 1 {
         if x_diff == 1 {
@@ -450,23 +455,23 @@ fn check_pawn_move(board: &Board, old_square: (usize, usize), new_square: (usize
             }
 
             if matches!(piece_to_take, Piece::Empty) {
-                return false;
+                return (false, false);
             }
 
             if pawn.is_white() == piece_to_take.is_white() {
-                return false;
+                return (false, false);
             }
 
-            return true;
+            return (true, true);
         }
         if !matches!(board.squares[new_square.1][new_square.0], Piece::Empty) {
-            return false;
+            return (false, false);
         }
 
-        return true;
+        return (true, false);
     }
 
-    return false;
+    return (false, false);
 }
 
 fn traverse_board(board: &Board, old_square: (usize, usize), new_square: (usize, usize)) -> bool {
@@ -789,7 +794,7 @@ fn gen_pawn_moves(
             continue;
         }
 
-        if !check_pawn_move(&board, pawn_square, new_square) {
+        if !check_pawn_move(&board, pawn_square, new_square).0 {
             continue;
         }
 
