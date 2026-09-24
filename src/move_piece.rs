@@ -462,7 +462,7 @@ fn check_pawn_move(
                 return (false, false);
             }
 
-            return (true, true);
+            return (true, is_enpassant);
         }
         if !matches!(board.squares[new_square.1][new_square.0], Piece::Empty) {
             return (false, false);
