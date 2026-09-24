@@ -55,7 +55,9 @@ pub fn move_piece(
     } else {
         temp_board.squares[new_square.1][new_square.0] = temp_board.squares[y][x];
         temp_board.squares[y][x] = Piece::Empty;
-        temp_board.history.push((old_square, new_square));
+        temp_board
+            .history
+            .push((old_square, new_square, promotion_piece));
     }
 
     if is_enpassant {
@@ -99,7 +101,9 @@ pub fn move_piece(
     if is_enpassant {
         board.squares[y][new_square.0] = Piece::Empty;
     }
-    board.history.push((old_square, new_square));
+    board
+        .history
+        .push((old_square, new_square, promotion_piece));
 
     let num_available_moves = gen_all_moves(&board).len();
     let king_in_check = king_is_checked(&board, board.white_turn);
@@ -438,7 +442,7 @@ fn check_pawn_move(
             // You cannot take an empty piece (this will change a bit with en passasnt)
             let last_move = match board.history.last() {
                 Some(last) => last,
-                None => &((0, 0), (0, 0)),
+                None => &((0, 0), (0, 0), 'q'),
             };
 
             let last_move_y_diff = last_move.0.1.abs_diff(last_move.1.1);
@@ -542,7 +546,7 @@ fn castle(mut board: Board, old_square: (usize, usize), new_square: (usize, usiz
     board.squares[new_rook_square.1][new_rook_square.0].set_moved();
     board.squares[new_square.1][new_square.0] = Piece::Empty;
 
-    board.history.push((old_square, new_square));
+    board.history.push((old_square, new_square, 'q'));
 
     return board;
 }
@@ -627,7 +631,7 @@ fn gen_king_moves(
             temp_board.squares[new_square.1][new_square.0] =
                 temp_board.squares[king_square.1][king_square.0];
             temp_board.squares[king_square.1][king_square.0] = Piece::Empty;
-            temp_board.history.push((king_square, new_square));
+            temp_board.history.push((king_square, new_square, 'q'));
         }
 
         if king_is_checked(&temp_board, !temp_board.white_turn) {
@@ -662,7 +666,7 @@ fn gen_queen_moves(
     }
 
     for move_ in pseudo_legal_moves {
-        if !move_is_legal(&board, (move_.0, move_.1), false) {
+        if !move_is_legal(&board, (move_.0, move_.1, 'q'), false) {
             continue;
         }
 
@@ -686,7 +690,7 @@ fn gen_rook_moves(
     }
 
     for move_ in pseudo_legal_moves {
-        if !move_is_legal(&board, (move_.0, move_.1), false) {
+        if !move_is_legal(&board, (move_.0, move_.1, 'q'), false) {
             continue;
         }
         valid_moves.push(move_);
@@ -709,7 +713,7 @@ fn gen_bishop_moves(
     }
 
     for move_ in pseudo_legal_moves {
-        if !move_is_legal(&board, (move_.0, move_.1), false) {
+        if !move_is_legal(&board, (move_.0, move_.1, 'q'), false) {
             continue;
         }
         valid_moves.push(move_);
@@ -748,7 +752,7 @@ fn gen_knight_moves(
             continue;
         }
 
-        if !move_is_legal(&board, (knight_square, new_square), false) {
+        if !move_is_legal(&board, (knight_square, new_square, 'q'), false) {
             continue;
         }
 
@@ -798,7 +802,7 @@ fn gen_pawn_moves(
             continue;
         }
 
-        if !move_is_legal(&board, (pawn_square, new_square), is_enpassant) {
+        if !move_is_legal(&board, (pawn_square, new_square, 'q'), is_enpassant) {
             continue;
         }
         if new_square.1 == 7 || new_square.1 == 0 {
@@ -814,12 +818,12 @@ fn gen_pawn_moves(
 
 fn move_is_legal(
     board: &Board,
-    move_: ((usize, usize), (usize, usize)),
+    move_: ((usize, usize), (usize, usize), char),
     is_enpassant: bool,
 ) -> bool {
     // Checks if the move puts the king in check, i.e the supplied move_ has to be pseudo legal
 
-    let (old_square, new_square) = move_;
+    let (old_square, new_square, promotion_piece) = move_;
 
     let mut temp_board = board.clone();
     temp_board.white_turn = !&temp_board.white_turn;
@@ -829,7 +833,7 @@ fn move_is_legal(
     if is_enpassant {
         temp_board.squares[old_square.1][new_square.0] = Piece::Empty;
     }
-    temp_board.history.push((old_square, new_square));
+    temp_board.history.push((old_square, new_square, move_.2));
 
     return !king_is_checked(&temp_board, !temp_board.white_turn);
 }

@@ -96,7 +96,7 @@ impl fmt::Debug for Piece {
 pub struct Board {
     pub white_turn: bool,
     pub squares: [[Piece; WIDTH]; HEIGHT],
-    pub history: Vec<((usize, usize), (usize, usize))>,
+    pub history: Vec<((usize, usize), (usize, usize), char)>,
     pub white_lost: bool,
     pub black_lost: bool,
     pub is_draw: bool,
@@ -138,7 +138,7 @@ pub fn create_board(fen_string: String) -> Board {
         }
     }
 
-    let mut history: Vec<((usize, usize), (usize, usize))> = Vec::new();
+    let mut history: Vec<((usize, usize), (usize, usize), char)> = Vec::new();
 
     if en_passant_square != "-" {
         let mut en_passant_coords = en_passant_square.chars();
@@ -181,6 +181,7 @@ pub fn create_board(fen_string: String) -> Board {
                     en_passant_y + 1
                 },
             ),
+            'q',
         ));
     }
 
