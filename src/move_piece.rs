@@ -64,6 +64,13 @@ pub fn move_piece(
         temp_board.squares[old_square.1][new_square.0] = Piece::Empty;
     }
 
+    if (matches!(piece, Piece::Pawn { .. })
+        && ((!board.white_turn && new_square.1 == 7) || (board.white_turn && new_square.1 == 0)))
+        && !['q', 'r', 'b', 'n'].contains(&promotion_piece)
+    {
+        return Err("Invalid promotion piece when promoting".to_string());
+    }
+
     if king_is_checked(&temp_board, !temp_board.white_turn) {
         return Err("Move puts own king in check".to_string());
     }
@@ -447,7 +454,7 @@ fn check_pawn_move(
             // You cannot take an empty piece (this will change a bit with en passasnt)
             let last_move = match board.history.last() {
                 Some(last) => last,
-                None => &((0, 0), (0, 0), 'q'),
+                None => &((0, 0), (0, 0), '-'),
             };
 
             let last_move_y_diff = last_move.0.1.abs_diff(last_move.1.1);
@@ -550,7 +557,7 @@ fn castle(mut board: Board, old_square: (usize, usize), new_square: (usize, usiz
     board.squares[new_rook_square.1][new_rook_square.0].set_moved();
     board.squares[old_rook_square.1][old_rook_square.0] = Piece::Empty;
 
-    board.history.push((old_square, new_square, 'q'));
+    board.history.push((old_square, new_square, '-'));
 
     return board;
 }
@@ -631,14 +638,14 @@ fn gen_king_moves(
             temp_board.squares[new_square.1][new_square.0] =
                 temp_board.squares[king_square.1][king_square.0];
             temp_board.squares[king_square.1][king_square.0] = Piece::Empty;
-            temp_board.history.push((king_square, new_square, 'q'));
+            temp_board.history.push((king_square, new_square, '-'));
         }
 
         if king_is_checked(&temp_board, !temp_board.white_turn) {
             continue;
         }
 
-        valid_moves.push((king_square, new_square, 'q'));
+        valid_moves.push((king_square, new_square, '-'));
     }
     return valid_moves;
 }
@@ -666,7 +673,7 @@ fn gen_queen_moves(
     }
 
     for move_ in pseudo_legal_moves {
-        if !move_is_legal(&board, (move_.0, move_.1, 'q'), false) {
+        if !move_is_legal(&board, (move_.0, move_.1, '-'), false) {
             continue;
         }
 
@@ -690,7 +697,7 @@ fn gen_rook_moves(
     }
 
     for move_ in pseudo_legal_moves {
-        if !move_is_legal(&board, (move_.0, move_.1, 'q'), false) {
+        if !move_is_legal(&board, (move_.0, move_.1, '-'), false) {
             continue;
         }
         valid_moves.push(move_);
@@ -713,7 +720,7 @@ fn gen_bishop_moves(
     }
 
     for move_ in pseudo_legal_moves {
-        if !move_is_legal(&board, (move_.0, move_.1, 'q'), false) {
+        if !move_is_legal(&board, (move_.0, move_.1, '-'), false) {
             continue;
         }
         valid_moves.push(move_);
@@ -752,11 +759,11 @@ fn gen_knight_moves(
             continue;
         }
 
-        if !move_is_legal(&board, (knight_square, new_square, 'q'), false) {
+        if !move_is_legal(&board, (knight_square, new_square, '-'), false) {
             continue;
         }
 
-        valid_moves.push((knight_square, new_square, 'q'));
+        valid_moves.push((knight_square, new_square, '-'));
     }
 
     return valid_moves;
@@ -802,7 +809,7 @@ fn gen_pawn_moves(
             continue;
         }
 
-        if !move_is_legal(&board, (pawn_square, new_square, 'q'), is_enpassant) {
+        if !move_is_legal(&board, (pawn_square, new_square, '-'), is_enpassant) {
             continue;
         }
         if new_square.1 == 7 || new_square.1 == 0 {
@@ -810,7 +817,7 @@ fn gen_pawn_moves(
                 valid_moves.push((pawn_square, new_square, promotion_piece));
             }
         } else {
-            valid_moves.push((pawn_square, new_square, 'q'));
+            valid_moves.push((pawn_square, new_square, '-'));
         }
     }
     return valid_moves;
@@ -884,7 +891,7 @@ fn traverse_moves(
             break;
         }
 
-        pseudo_legal_moves.push(((old_square.0, old_square.1), (temp_x, temp_y), 'q'));
+        pseudo_legal_moves.push(((old_square.0, old_square.1), (temp_x, temp_y), '-'));
 
         if !matches!(temp_piece, Piece::Empty) {
             break;
