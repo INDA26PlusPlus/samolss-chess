@@ -265,7 +265,7 @@ fn check_king_move(
 
     // This line results in an error, that does not affect compilation?????????????? Seems similar
     // to this https://github.com/rust-lang/rust-analyzer/issues/17441
-    let try_castling = x_diff.abs() == 2 && king.has_moved() == Some(false);
+    let try_castling = x_diff.abs() == 2 && y_diff.abs() == 0 && king.has_moved() == Some(false);
 
     let mut is_castling = false;
     if try_castling {
