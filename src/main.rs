@@ -1,5 +1,5 @@
 use samolss_chess::{
-    board::{self, create_board, print_board},
+    board::{self, board_to_board_string, create_board, print_board},
     move_piece::{self, gen_all_moves, move_piece, perft},
 };
 
@@ -13,6 +13,7 @@ fn main() {
         let (old, new) = handle_input();
         board = move_piece(board, old, new, 'q').expect("Fuuck");
         print_board(&board);
+        println!("board_string: {}", board_to_board_string(&board));
         println!("Is white: {}", board.white_turn);
     }
 }

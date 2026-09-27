@@ -332,3 +332,57 @@ pub fn print_board(board: &Board) {
         println!("{i}{:?}", row);
     }
 }
+
+pub fn board_to_board_string(board: &Board) -> String {
+    let mut board_string = "".to_string();
+    for row in board.squares.iter().rev() {
+        for piece in row.iter() {
+            match piece {
+                Piece::King { is_white, .. } => {
+                    if *is_white {
+                        board_string += "K"
+                    } else {
+                        board_string += "k"
+                    }
+                }
+                Piece::Queen { is_white, .. } => {
+                    if *is_white {
+                        board_string += "Q"
+                    } else {
+                        board_string += "q"
+                    }
+                }
+                Piece::Rook { is_white, .. } => {
+                    if *is_white {
+                        board_string += "R"
+                    } else {
+                        board_string += "r"
+                    }
+                }
+                Piece::Bishop { is_white, .. } => {
+                    if *is_white {
+                        board_string += "B"
+                    } else {
+                        board_string += "b"
+                    }
+                }
+                Piece::Knight { is_white, .. } => {
+                    if *is_white {
+                        board_string += "N"
+                    } else {
+                        board_string += "n"
+                    }
+                }
+                Piece::Pawn { is_white, .. } => {
+                    if *is_white {
+                        board_string += "P"
+                    } else {
+                        board_string += "p"
+                    }
+                }
+                Piece::Empty => board_string += " ",
+            }
+        }
+    }
+    return board_string;
+}
