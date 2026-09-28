@@ -112,15 +112,16 @@ pub fn move_piece(
         .history
         .push((old_square, new_square, promotion_piece));
 
-    let num_available_moves = gen_all_moves(&board).len();
+    let available_moves = gen_all_moves(&board);
+    board.legal_moves = available_moves;
     let king_in_check = king_is_checked(&board, board.white_turn);
 
-    if num_available_moves == 0 && king_in_check {
+    if board.legal_moves.len() == 0 && king_in_check {
         board.white_lost = board.white_turn;
         board.black_lost = !board.white_turn;
     }
 
-    if num_available_moves == 0 {
+    if board.legal_moves.len() == 0 {
         board.is_draw = true;
     }
 

@@ -1,6 +1,8 @@
 use core::panic::PanicInfo;
 use std::{fmt, string};
 
+use crate::move_piece::gen_all_moves;
+
 pub const WIDTH: usize = 8;
 pub const HEIGHT: usize = 8;
 
@@ -97,6 +99,7 @@ pub struct Board {
     pub white_turn: bool,
     pub squares: [[Piece; WIDTH]; HEIGHT],
     pub history: Vec<((usize, usize), (usize, usize), char)>,
+    pub legal_moves: Vec<((usize, usize), (usize, usize), char)>,
     pub white_lost: bool,
     pub black_lost: bool,
     pub is_draw: bool,
@@ -316,9 +319,22 @@ pub fn create_board(fen_string: String) -> Board {
             x += 1;
         }
     }
+    let temp_board = Board {
+        white_turn: white_turn,
+        history: history.clone(),
+        legal_moves: Vec::new(),
+        squares: squares,
+        white_lost: false,
+        black_lost: false,
+        is_draw: false,
+    };
+
+    let legal_moves = gen_all_moves(&temp_board);
+
     return Board {
         white_turn: white_turn,
         history: history,
+        legal_moves: legal_moves,
         squares: squares,
         white_lost: false,
         black_lost: false,
