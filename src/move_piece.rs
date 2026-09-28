@@ -559,6 +559,7 @@ fn castle(mut board: Board, old_square: (usize, usize), new_square: (usize, usiz
     board.squares[old_rook_square.1][old_rook_square.0] = Piece::Empty;
 
     board.history.push((old_square, new_square, '-'));
+    board.legal_moves = gen_all_moves(&board);
 
     return board;
 }
